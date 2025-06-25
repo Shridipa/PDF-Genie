@@ -342,6 +342,23 @@ def processing():
         return redirect(url_for("dashboard"))
 
     return render_template("processing.html", translated_output=translation.translated_filename)
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    translations = (
+        db.session.query(Translation)
+        .filter_by(user_id=current_user.id)
+        .order_by(Translation.timestamp.desc())
+        .all()
+    )
+
+    # Optional: Add date-only attribute for grouping in templates
+    for t in translations:
+        t.date_only = t.timestamp.date()
+
+    return render_template("dashboard.html", translations=translations)
+
+
 
 from werkzeug.utils import secure_filename
 
