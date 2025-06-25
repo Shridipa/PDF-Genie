@@ -330,37 +330,45 @@ def profile():
 
 ALLOWED_EXTENSIONS = {'.pdf', '.docx', '.txt', '.html'}
 
-@app.route("/translated/<filename>")
+@app.route("/translate", methods=["POST"])
 @login_required
-def translated_pdf(filename):
-    # Construct full path
-    file_path = os.path.join(TRANSLATED_FOLDER, filename)
+def translate_file():
+    uploaded_file = request.files.get("file")
+    target_lang = request.form.get("target_lang")
+    new_filename = request.form.get("new_filename")
 
-    # 1. Check if file exists
-    if not os.path.exists(file_path):
-        flash("File does not exist.")
+    if not uploaded_file or not target_lang:
+        flash("Missing file or language.")
         return redirect(url_for("dashboard"))
 
-    # 2. Optional: Ensure file type is safe
-    ext = os.path.splitext(filename)[1].lower()
-    if ext not in ALLOWED_EXTENSIONS:
-        flash("Invalid file type.")
-        return redirect(url_for("dashboard"))
+    # Save the uploaded file to a temp folder
+    filename = secure_filename(uploaded_file.filename)
+    original_path = os.path.join(UPLOAD_FOLDER, filename)
+    uploaded_file.save(original_path)
 
-    # 3. Optional: Check if the file belongs to the current user
-    translation = Translation.query.filter_by(
-        translated_filename=filename,
+    # Generate translated filename
+    name_root, ext = os.path.splitext(filename)
+    translated_name = f"{new_filename or name_root}_translated{ext}"
+    translated_path = os.path.join(TRANSLATED_FOLDER, translated_name)
+
+    # Do your translation logic here (e.g., using pdfplumber or deep-translator)
+    # You already have this piece wired, so I’ll skip repeating it.
+
+    # Save file metadata to the database
+    new_translation = Translation(
+        original_filename=filename,
+        translated_filename=translated_name,
+        language=target_lang,
+        timestamp=datetime.utcnow(),
         user_id=current_user.id
-    ).first()
-    if not translation:
-        flash("You don’t have access to this file.")
-        return redirect(url_for("dashboard"))
+    )
+    db.session.add(new_translation)
+    db.session.commit()
 
-    # 4. Log download action (optional)
-    app.logger.info(f"User {current_user.username} downloaded {filename}")
+    # 👉 Set the file ID in session for the /processing route
+    session["processing_file_id"] = new_translation.id
 
-    # 5. Send the file
-    return send_from_directory(TRANSLATED_FOLDER, filename, as_attachment=True)
+    return redirect(url_for("processing"))
 
 
 from flask import jsonify
