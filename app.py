@@ -297,15 +297,6 @@ def rename():
 
     return render_template("rename.html", original_name=original_name, output_lang=output_lang)
 
-@app.route("/processing")
-@login_required
-def processing():
-    file_id = session.get("processing_file_id")
-    if not file_id:
-        return redirect(url_for("dashboard"))
-    return render_template("processing.html", file_id=file_id)
-
-
 @app.route("/dashboard")
 @login_required
 def dashboard():
