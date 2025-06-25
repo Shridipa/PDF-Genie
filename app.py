@@ -352,13 +352,11 @@ def dashboard():
         .all()
     )
 
-    # Optional: Add date-only attribute for grouping in templates
+    # Attach a 'date_only' attribute to each record for template grouping
     for t in translations:
         t.date_only = t.timestamp.date()
 
     return render_template("dashboard.html", translations=translations)
-
-
 
 from werkzeug.utils import secure_filename
 
