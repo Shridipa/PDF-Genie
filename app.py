@@ -322,6 +322,12 @@ def dashboard():
 
     return render_template("dashboard.html", translations=translations)
 
+@app.route("/profile")
+@login_required
+def profile():
+    documents = Translation.query.filter_by(user_id=current_user.id).all()
+    return render_template("profile.html", user=current_user, documents=documents)
+
 @app.route("/processing")
 @login_required
 def processing():
@@ -342,27 +348,6 @@ def processing():
         return redirect(url_for("dashboard"))
 
     return render_template("processing.html", translated_output=translation.translated_filename)
-@app.route("/dashboard")
-@login_required
-def dashboard():
-    translations = (
-        db.session.query(Translation)
-        .filter_by(user_id=current_user.id)
-        .order_by(Translation.timestamp.desc())
-        .all()
-    )
-
-    # Attach a 'date_only' attribute to each record for template grouping
-    for t in translations:
-        t.date_only = t.timestamp.date()
-
-    return render_template("dashboard.html", translations=translations)
-
-@app.route("/profile")
-@login_required
-def profile():
-    documents = Translation.query.filter_by(user_id=current_user.id).all()
-    return render_template("profile.html", user=current_user, documents=documents)
 
 
 from werkzeug.utils import secure_filename
