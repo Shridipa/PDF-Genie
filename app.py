@@ -300,20 +300,36 @@ def rename():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    # 🔎 Fetch all translations by current user, latest first
-    translations = (
+    raw_translations = (
         db.session.query(Translation)
         .filter_by(user_id=current_user.id)
         .order_by(Translation.timestamp.desc())
         .all()
     )
 
-    # 🗓️ Add a date_only property to each translation for template grouping
-    for t in translations:
-        t.date_only = t.timestamp.date()
+    translations = []
 
-    # 🚀 Render dashboard with translation data
+    for t in raw_translations:
+        # Handle missing fields defensively
+        if not hasattr(t, 'translated_filename') or not hasattr(t, 'original_filename'):
+            app.logger.warning(f"Translation with ID {t.id} has missing fields and was skipped.")
+            continue
+
+        # Add a fallback if fields are unexpectedly None
+        t.translated_filename = t.translated_filename or "Unnamed File"
+        t.original_filename = t.original_filename or "Unknown Upload"
+        
+        # Attach a date_only attribute for UI grouping
+        try:
+            t.date_only = t.timestamp.date()
+        except Exception as e:
+            app.logger.warning(f"Invalid timestamp on file ID {t.id}: {e}")
+            t.date_only = None
+
+        translations.append(t)
+
     return render_template("dashboard.html", translations=translations)
+
 
 @app.route("/profile")
 @login_required
