@@ -309,6 +309,7 @@ def processing():
 @app.route("/dashboard")
 @login_required
 def dashboard():
+    # 🔎 Fetch all translations by current user, latest first
     translations = (
         db.session.query(Translation)
         .filter_by(user_id=current_user.id)
@@ -316,10 +317,11 @@ def dashboard():
         .all()
     )
 
-    # Attach a date_only property for grouping
+    # 🗓️ Add a date_only property to each translation for template grouping
     for t in translations:
         t.date_only = t.timestamp.date()
 
+    # 🚀 Render dashboard with translation data
     return render_template("dashboard.html", translations=translations)
 
 @app.route("/profile")
