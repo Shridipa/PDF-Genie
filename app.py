@@ -305,6 +305,7 @@ def processing():
         return redirect(url_for("dashboard"))
     return render_template("processing.html", file_id=file_id)
 
+
 @app.route("/dashboard")
 @login_required
 def dashboard():
@@ -327,14 +328,40 @@ def profile():
     documents = Translation.query.filter_by(user_id=current_user.id).all()
     return render_template("profile.html", user=current_user, documents=documents)
 
+ALLOWED_EXTENSIONS = {'.pdf', '.docx', '.txt', '.html'}
+
 @app.route("/translated/<filename>")
 @login_required
 def translated_pdf(filename):
+    # Construct full path
     file_path = os.path.join(TRANSLATED_FOLDER, filename)
+
+    # 1. Check if file exists
     if not os.path.exists(file_path):
         flash("File does not exist.")
         return redirect(url_for("dashboard"))
-    return send_from_directory(TRANSLATED_FOLDER, filename)
+
+    # 2. Optional: Ensure file type is safe
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        flash("Invalid file type.")
+        return redirect(url_for("dashboard"))
+
+    # 3. Optional: Check if the file belongs to the current user
+    translation = Translation.query.filter_by(
+        translated_filename=filename,
+        user_id=current_user.id
+    ).first()
+    if not translation:
+        flash("You don’t have access to this file.")
+        return redirect(url_for("dashboard"))
+
+    # 4. Log download action (optional)
+    app.logger.info(f"User {current_user.username} downloaded {filename}")
+
+    # 5. Send the file
+    return send_from_directory(TRANSLATED_FOLDER, filename, as_attachment=True)
+
 
 from flask import jsonify
 @app.route('/assistant', methods=['POST'])
