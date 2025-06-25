@@ -322,13 +322,29 @@ def dashboard():
 
     return render_template("dashboard.html", translations=translations)
 
-@app.route("/profile")
+@app.route("/processing")
 @login_required
-def profile():
-    documents = Translation.query.filter_by(user_id=current_user.id).all()
-    return render_template("profile.html", user=current_user, documents=documents)
+def processing():
+    file_id = session.get("processing_file_id")
 
-ALLOWED_EXTENSIONS = {'.pdf', '.docx', '.txt', '.html'}
+    if not file_id:
+        flash("Processing session expired.")
+        return redirect(url_for("dashboard"))
+
+    # 🧠 Optional: Fetch file details if needed
+    translation = Translation.query.filter_by(
+        id=file_id,
+        user_id=current_user.id
+    ).first()
+
+    if not translation:
+        flash("Translation not found.")
+        return redirect(url_for("dashboard"))
+
+    return render_template("processing.html", translated_output=translation.translated_filename)
+
+from werkzeug.utils import secure_filename
+
 
 @app.route("/translate", methods=["POST"])
 @login_required
@@ -341,7 +357,7 @@ def translate_file():
         flash("Missing file or language.")
         return redirect(url_for("dashboard"))
 
-    # Save the uploaded file to a temp folder
+    # Save uploaded file
     filename = secure_filename(uploaded_file.filename)
     original_path = os.path.join(UPLOAD_FOLDER, filename)
     uploaded_file.save(original_path)
@@ -351,10 +367,10 @@ def translate_file():
     translated_name = f"{new_filename or name_root}_translated{ext}"
     translated_path = os.path.join(TRANSLATED_FOLDER, translated_name)
 
-    # Do your translation logic here (e.g., using pdfplumber or deep-translator)
-    # You already have this piece wired, so I’ll skip repeating it.
+    # 🧠 Perform translation logic here
+    # (Assuming you've implemented it already)
 
-    # Save file metadata to the database
+    # Save to DB
     new_translation = Translation(
         original_filename=filename,
         translated_filename=translated_name,
@@ -365,7 +381,7 @@ def translate_file():
     db.session.add(new_translation)
     db.session.commit()
 
-    # 👉 Set the file ID in session for the /processing route
+    # ✅ Store file ID in session for /processing
     session["processing_file_id"] = new_translation.id
 
     return redirect(url_for("processing"))
