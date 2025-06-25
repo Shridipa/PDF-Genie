@@ -1,6 +1,6 @@
 from flask_login import UserMixin
 from datetime import datetime
-from AI import db, login_manager
+from __init__ import db, login_manager
 
 class User(UserMixin, db.Model):
     """Represents a registered user."""
