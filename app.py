@@ -358,6 +358,13 @@ def dashboard():
 
     return render_template("dashboard.html", translations=translations)
 
+@app.route("/profile")
+@login_required
+def profile():
+    documents = Translation.query.filter_by(user_id=current_user.id).all()
+    return render_template("profile.html", user=current_user, documents=documents)
+
+
 from werkzeug.utils import secure_filename
 
 
