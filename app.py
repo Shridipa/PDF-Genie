@@ -9,8 +9,8 @@ from deep_translator import GoogleTranslator
 from bs4 import BeautifulSoup
 import pdfplumber
 from weasyprint import HTML, CSS
-from AI import create_app, db, bcrypt
-from AI.models import User, Translation
+from __init__ import create_app, db, bcrypt
+from models import User, Translation
 app = create_app()
 from datetime import datetime
 

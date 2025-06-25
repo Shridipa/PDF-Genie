@@ -1,9 +1,0 @@
-pdfplumber
-fpdf
-deep-translator
-flask
-flask-login
-flask-bcrypt
-flask-sqlalchemy
-bs4
-PyPDF2
