@@ -1,0 +1,101 @@
+@font-face {
+    font-family: 'Noto Sans Devanagari';
+    src: url("/static/fonts/NotoSansDevanagari-Regular.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+}
+
+body {
+    font-family: 'Noto Sans Devanagari', Arial, sans-serif;
+    margin: 20px;
+    background-color: #f4f4f4;
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+}
+
+form {
+    max-width: 500px;
+    margin: auto;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+input[type="file"],
+select,
+select[name="target_language"] {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: white;
+    font-family: 'Noto Sans Devanagari', Arial, sans-serif;
+    font-size: 14px;
+}
+
+button {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin-top: 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+p#status {
+    text-align: center;
+    font-size: 14px;
+    color: #007bff;
+    margin-top: 15px;
+}
+p#error {
+    text-align: center;
+    font-size: 14px;
+    color: red;
+    margin-top: 15px;
+}
+.text-gradient {
+  background: linear-gradient(90deg, #7c3aed, #fb7185);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent; /* Keeps text visible */
+}
+.card.glass-card {
+  transition: all 0.2s ease-in-out;
+}
+.card.glass-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+}
+.btn {
+  transition: transform 0.2s ease;
+}
+.btn:hover {
+  transform: scale(1.03);
+}
+.dropdown-menu .dropdown-item:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+.dropdown-menu .avatar {
+  transition: box-shadow 0.2s ease-in-out;
+}
+.dropdown-menu .avatar:hover {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+}
+
+
+

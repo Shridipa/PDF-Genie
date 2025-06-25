@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 960px;">
+
+  <!-- Welcome Banner -->
+  <div class="p-5 mb-5 rounded-4 text-white shadow-sm position-relative overflow-hidden"
+       style="background: linear-gradient(135deg, #3b82f6, #60a5fa);">
+    <div class="row align-items-center">
+      <div class="col-lg-8">
+        <h2 class="fw-bold mb-2">Welcome back, {{ current_user.name }} 👋</h2>
+        <p class="mb-0">
+          You’ve translated <strong>{{ translations|length }}</strong> file{{ translations|length != 1 and 's' or '' }}
+          across <strong>{{ translations | map(attribute='language') | unique | list | length }}</strong> language{{ translations | map(attribute='language') | unique | list | length != 1 and 's' or '' }}.
+        </p>
+      </div>
+      <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+        <a href="{{ url_for('home') }}" class="btn btn-light btn-lg shadow-sm rounded-pill px-4 py-2">
+          <i class="bi bi-plus-circle me-2"></i> New Translation
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="row g-4 mb-4">
+    <div class="col-md-6">
+      <div class="card border-0 text-center p-5 shadow-sm bg-white rounded-4">
+        <h6 class="text-muted mb-2">Total Translations</h6>
+        <h1 class="fw-bold text-primary display-4">{{ translations|length }}</h1>
+      </div>
+    </div>
+    <div class="col-md-6">
+      {% set langs = translations | map(attribute='language') | unique | list %}
+      <div class="card border-0 text-center p-5 shadow-sm bg-white rounded-4">
+        <h6 class="text-muted mb-2">Languages Used</h6>
+        <h1 class="fw-bold text-success display-4">{{ langs|length }}</h1>
+      </div>
+    </div>
+  </div>
+
+  {% if translations %}
+    {% set grouped = translations | groupby('date_only') %}
+    {% for date, items in grouped %}
+      <div class="mt-5">
+        <h5 class="fw-semibold text-secondary mb-3">
+          <i class="bi bi-calendar-check me-2 text-muted"></i>{{ date.strftime('%d %B %Y') }}
+        </h5>
+
+        {% if items %}
+        <div class="row row-cols-1 row-cols-md-2 g-4">
+          {% for t in items %}
+          <div class="col">
+            <div class="card border-0 rounded-4 shadow-sm h-100 px-4 py-3 bg-white position-relative hover-shadow"
+                 style="transition: box-shadow 0.2s ease-in-out;">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                  <h5 class="fw-semibold text-primary mb-1">
+                    <i class="bi bi-file-earmark-text me-1"></i>{{ t.translated_name or 'Unnamed File' }}
+                  </h5>
+                  <small class="text-muted">Uploaded as <span class="fst-italic">{{ t.original_name }}</span></small>
+                </div>
+                <span class="badge rounded-pill text-white px-3"
+                      style="background: linear-gradient(135deg, #6366f1, #7c3aed); font-size: 0.8rem;">
+                  <i class="bi bi-translate me-1"></i>{{ t.language.upper() }}
+                </span>
+              </div>
+
+              <p class="text-muted small mb-4">
+                <i class="bi bi-clock me-1"></i> {{ t.timestamp.strftime('%I:%M %p') }}
+              </p>
+
+              <div class="d-flex flex-wrap gap-2">
+                <a href="{{ url_for('translated_pdf', filename=t.translated_name) }}"
+                   class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                  <i class="bi bi-download me-1"></i>Download
+                </a>
+                <a href="{{ url_for('retranslate', file_id=t.id) }}"
+                   class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                  <i class="bi bi-pencil-square me-1"></i>Retranslate
+                </a>
+                <form action="{{ url_for('delete_pdf', file_id=t.id) }}" method="POST" class="d-inline">
+                  <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                    <i class="bi bi-trash3 me-1"></i>Delete
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="text-center my-5">
+      <img src="{{ url_for('static', filename='assets/empty-state.svg') }}"
+           alt="No files yet" class="img-fluid" style="max-width: 300px;">
+      <h5 class="mt-4 text-muted">Nothing here yet!</h5>
+      <p class="text-muted">Start by uploading your first file to translate.</p>
+      <a href="{{ url_for('home') }}" class="btn btn-primary rounded-pill px-4 py-2">
+        <i class="bi bi-upload me-1"></i> Upload Now
+      </a>
+    </div>
+  {% endif %}
+
+</div>
+
+<!-- FAB: Floating Action Button -->
+<a href="{{ url_for('home') }}"
+   class="btn btn-primary rounded-circle shadow-lg position-fixed bottom-0 end-0 m-4 d-flex justify-content-center align-items-center"
+   style="width: 56px; height: 56px;">
+  <i class="bi bi-plus-lg fs-4"></i>
+</a>
+{% endblock %}
+

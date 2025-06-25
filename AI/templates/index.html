@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+  <!-- 🌟 Heading -->
+  <div class="funky-heading">
+    <i class="bi bi-stars"></i> Translate Anything, Anywhere!
+  </div>
+
+  <!-- 🚀 Upload Form -->
+  <div class="row top-section-row align-items-center justify-content-center mb-5">
+    <div class="col-lg-6">
+      <h2 class="cta-title text-danger fw-bold mb-3">Ready to break language barriers?</h2>
+      <p class="cta-desc text-primary">
+        Upload your document and get a high-quality translation in seconds.
+        No hassle, no limits — just pure translation magic!
+      </p>
+      <a href="#pdfs" class="btn upload-btn">LET'S GET STARTED!</a>
+    </div>
+
+    <div class="col-lg-6 d-flex justify-content-center">
+      <div class="upload-card w-100">
+        {% if current_user.is_authenticated %}
+          <div class="upload-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
+          <p class="upload-label text-primary fw-bold mb-2">Upload Your File</p>
+          <p class="upload-instructions text-muted">Select a PDF, DOCX, TXT, or HTML file to translate</p>
+
+          {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+          {% endif %}
+
+          <form method="POST" enctype="multipart/form-data">
+              <input class="form-control mb-3" type="file" name="pdfs" id="pdfs" accept=".pdf,.txt,.html,.htm,.docx" required>
+
+              <select class="form-select mb-3" name="output_lang" id="output_lang" required>
+                {% for code, name in languages.items() %}
+                  <option value="{{ code }}">{{ name }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="upload-btn w-100">
+                <i class="bi bi-arrow-repeat"></i> Translate Now
+              </button>
+            </form>
+
+        {% else %}
+          <div class="alert alert-info">
+            Please <a href="{{ url_for('login') }}">log in</a> or
+            <a href="{{ url_for('register') }}">register</a> to upload and translate documents.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- 🌐 Supported Languages -->
+  <div class="languages-section mb-5">
+    <h4 class="funky-langs"><i class="bi bi-globe2"></i> Supported Languages</h4>
+    <div class="row row-cols-2 row-cols-md-5 g-3 justify-content-center">
+      {% for code, name in languages.items() %}
+        <div class="col">
+          <div class="lang-card">{{ name | capitalize }}</div>
+        </div>
+      {% endfor %}
+    </div>
+    <p class="text-center mt-3 text-muted small">
+      Languages auto-loaded from Google Translate 🌍 — go ahead, pick your native tongue!
+    </p>
+  </div>
+</div>
+
+<!-- 🧞 Assistant Panel -->
+<div id="genie-panel" class="card genie-slide-box rounded-4 shadow">
+  <div class="p-3 border-bottom d-flex align-items-center gap-2 fw-bold text-primary">
+    <i class="bi bi-stars"></i> Genie Guide
+  </div>
+  <div id="chat-window" class="chat-window px-3 py-2">
+    <div class="chat-bubble chat-assistant">Hi Shridipa! Ask me anything about your document.</div>
+  </div>
+  <form id="chat-form" class="d-flex border-top p-2 gap-2">
+    <input type="text" id="chat-input" class="form-control" placeholder="Ask Genie..." required />
+    <button class="btn btn-primary"><i class="bi bi-send"></i></button>
+  </form>
+</div>
+
+<!-- 💬 Chat Toggle Button -->
+<button id="genie-toggle" class="genie-float-btn" aria-label="Toggle Genie Chat">
+  <i class="bi bi-chat-dots-fill fs-5"></i>
+</button>
+
+<!-- 🧞 Floating Genie Emoji -->
+<div id="genie-emoji" class="genie-float-emoji">🧞‍♂️</div>
+
+
+
+<!-- ✨ Styles -->
+<style>
+  .funky-heading {
+    font-size: 2.3rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: #7c3aed;
+    text-align: center;
+    margin: 2rem auto;
+    text-shadow: 2px 4px 12px #a5b4fc;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.7rem;
+  }
+
+  .upload-card {
+    background: #fff;
+    border-radius: 1.5rem;
+    box-shadow: 0 8px 32px rgba(124,58,237,0.13);
+    padding: 2rem;
+    border: 2px solid #7c3aed22;
+    transition: 0.2s ease;
+    text-align: center;
+  }
+
+  .upload-btn {
+    background: linear-gradient(90deg, #7c3aed, #fb7185);
+    color: white;
+    font-weight: 700;
+    border-radius: 2rem;
+    border: none;
+    padding: 0.8rem 2rem;
+    margin-top: 1rem;
+    transition: 0.2s;
+  }
+
+  .upload-btn:hover {
+    background: linear-gradient(90deg, #fb7185, #7c3aed);
+    transform: scale(1.05);
+  }
+
+  .lang-card {
+    padding: 1rem;
+    text-align: center;
+    font-weight: 600;
+    border-radius: 1rem;
+    background: #f8fafc;
+    box-shadow: 0 2px 12px rgba(124,58,237,0.07);
+    transition: 0.2s ease;
+  }
+
+  .lang-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 24px #fb718555;
+  }
+
+  .chat-window {
+    max-height: 300px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .chat-bubble {
+    padding: 12px 16px;
+    border-radius: 18px;
+    max-width: 75%;
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  .chat-user {
+    background-color: #e7f1ff;
+    align-self: flex-end;
+    border-top-right-radius: 0;
+  }
+
+  .chat-assistant {
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-top-left-radius: 0;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes floatGenie {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  .genie-float-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #3b82f6);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .genie-float-emoji {
+    position: fixed;
+    bottom: 88px;
+    right: 90px;
+    font-size: 2.5rem;
+    z-index: 1001;
+    animation: floatGenie 3s ease-in-out infinite;
+    display: none;
+  }
+
+  .genie-slide-box {
+    position: fixed;
+    bottom: 92px;
+    right: 24px;
+    width: 360px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    display: none;
+    flex-direction: column;
+    z-index: 1000;
+  }
+
+  @media (max-width: 480px) {
+    .genie-slide-box {
+      right: 16px;
+      left: 16px;
+      width: auto;
+    }
+  }
+  .genie-slide-box {
+  position: fixed;
+  bottom: 92px;
+  right: 24px;
+  width: 360px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  display: none;
+  z-index: 1000;
+}
+.chat-window {
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: linear-gradient(145deg, #f8f9ff, #eef2ff);
+  border-radius: 0.75rem;
+  border: 1px solid #dee2e6;
+  box-shadow: inset 0 1px 4px rgba(0,0,0,0.05);
+}
+.chat-bubble {
+  padding: 12px 16px;
+  border-radius: 1.25rem;
+  max-width: 75%;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  animation: fadeInUp 0.25s ease;
+}
+.chat-user {
+  background: #e0f2fe;
+  color: #0369a1;
+  align-self: flex-end;
+  border-top-right-radius: 0;
+}
+.chat-assistant {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  border-top-left-radius: 0;
+}
+#chat-input {
+  border-radius: 2rem;
+  border: 1px solid #d1d5db;
+  padding: 0.6rem 1rem;
+}
+#chat-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+.genie-float-btn {
+  position: fixed;
+  bottom: 154px;
+  right: 74px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c3aed, #6366f1);
+  color: white;
+  border: none;
+  box-shadow: 0 8px 16px rgba(124,58,237,0.35);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.genie-float-emoji {
+  position: fixed;
+  bottom: 88px;
+  right: 90px;
+  font-size: 2.5rem;
+  z-index: 1001;
+  animation: floatGenie 3s ease-in-out infinite;
+  display: none;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes floatGenie {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@media (max-width: 480px) {
+  .genie-slide-box {
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+}
+
+
+</style>
+
+<!-- 🧞 Scripts -->
+<script>
+  const genieToggle = document.getElementById('genie-toggle');
+  const geniePanel = document.getElementById('genie-panel');
+  const genieEmoji = document.getElementById('genie-emoji');
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  const chatWindow = document.getElementById('chat-window');
+
+  genieToggle.addEventListener('click', () => {
+    const isVisible = geniePanel.style.display === 'block';
+    geniePanel.style.display = isVisible ? 'none' : 'block';
+    genieEmoji.style.display = isVisible ? 'none' : 'block';
+    if (!isVisible) setTimeout(() => chatInput.focus(), 300);
+  });
+
+  chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const message = chatInput.value.trim();
+    if (!message) return;
+
+    chatWindow.innerHTML += `<div class="chat-bubble chat-user align-self-end">${message}</div>`;
+    chatInput.value = '';
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+
+    try {
+      const res = await fetch('/assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message })
+      });
+
+      if (res.redirected || res.status === 302) {
+        chatWindow.innerHTML += `<div class="chat-bubble chat-assistant text-danger">Please log in to talk to Genie ✨</div>`;
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+        return;
+      }
+
+      const data = await res.json();
+      chatWindow.innerHTML += `<div class="chat-bubble chat-assistant">${data.reply}</div>`;
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    } catch {
+      chatWindow.innerHTML += `<div class="chat-bubble chat-assistant text-danger">Sorry, Genie is on a break ☕</div>`;
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+  });
+</script>
+
+{% endblock %}
+

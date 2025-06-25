@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 600px;">
+
+  <!-- Emoji Avatar & Info -->
+  <div class="text-center mb-4">
+    <div style="font-size: 4rem;">😄</div>
+    <h3 class="fw-bold mt-2">{{ user.name or user.username }}</h3>
+    <p class="text-muted small mb-1">
+      <i class="bi bi-envelope me-1"></i>{{ user.email }}
+    </p>
+    {% if user.created_at %}
+      <p class="text-muted small">Joined on {{ user.created_at.strftime('%d %b %Y') }}</p>
+    {% else %}
+      <p class="text-muted small">Joined on unknown date</p>
+    {% endif %}
+  </div>
+
+  <!-- Documents List -->
+  <div class="card border-0 shadow-sm rounded-3 mb-4">
+    <div class="card-body">
+      <h5 class="card-title mb-3">
+        <i class="bi bi-folder2-open me-2"></i>Your Documents
+      </h5>
+      {% if documents %}
+        <ul class="list-group list-group-flush">
+          {% for doc in documents %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>
+              <i class="bi bi-file-earmark-text me-1 text-primary"></i>
+              {{ doc.translated_name or doc.original_name or "Unnamed File" }}
+            </span>
+            <small class="text-muted">{{ doc.timestamp.strftime('%d %b %Y') }}</small>
+          </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-muted">No documents uploaded yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Back + Logout -->
+  <div class="d-flex justify-content-between">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Dashboard
+    </a>
+    <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">
+      <i class="bi bi-box-arrow-right"></i> Logout
+    </a>
+  </div>
+
+</div>
+{% endblock %}
+

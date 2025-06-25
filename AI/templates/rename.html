@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Name Your File | PDF Genie{% endblock %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+  <div class="card shadow-lg p-4 border-0 rounded-4" style="max-width: 500px; width: 100%;">
+    <div class="text-center mb-4">
+      <i class="bi bi-magic text-primary" style="font-size: 2.5rem;"></i>
+      <h4 class="fw-semibold mt-3">Give Your Genie-Crafted PDF a Name</h4>
+      <p class="text-muted small">Name it anything you like — we’ll package it up and send it your way!</p>
+    </div>
+
+    <form method="POST" novalidate>
+      <div class="mb-3">
+        <label class="form-label fw-medium">Custom Filename</label>
+        <input type="text" name="custom_name" class="form-control form-control-lg" placeholder="e.g. MyTranslatedFile" required>
+        <div class="form-text">Avoid special characters — we'll add “.pdf” for you.</div>
+      </div>
+
+      <div class="d-grid">
+        <button type="submit" class="btn btn-primary btn-lg">
+          <i class="bi bi-download me-2"></i> Save & Download
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
