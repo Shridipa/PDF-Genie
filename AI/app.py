@@ -20,6 +20,8 @@ def inject_now():
 from flask_migrate import Migrate
 migrate = Migrate(app, db)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB upload limit
+
+
 import tempfile
 TEMP_FOLDER = os.path.join(tempfile.gettempdir(), "pdfgenie-temp")
 os.makedirs(TEMP_FOLDER, exist_ok=True)
