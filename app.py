@@ -88,47 +88,73 @@ def restore_terms(text, placeholders):
         text = re.sub(re.escape(placeholder), term, text, flags=re.IGNORECASE)
     return text
 
+import os
+from weasyprint import HTML
 
 def generate_pdf(text, output_path, lang="en"):
-    # Step 1: Clean newline characters to preserve sentence flow in HTML
+    if not text.strip():
+        print("⚠️ Translated text is empty. Skipping PDF generation.")
+        return
+
+    # Step 1: Replace newline characters with HTML <br>
     cleaned_text = text.replace('\n', '<br>')
 
-    # Step 2: Define appropriate font styling based on language
-    if lang == "hi":
-        font_css = """
-        @font-face {
-            font-family: 'NotoSansDevanagari';
-            src: url('static/fonts/NotoSansDevanagari-Regular.ttf');
-        }
-        body {
-            font-family: 'NotoSansDevanagari', sans-serif;
-            font-size: 16px;
-            line-height: 1.6;
-        }
-        """
-    else:
-        font_css = """
-        body {
-            font-family: sans-serif;
-            font-size: 16px;
-            line-height: 1.6;
-        }
-        """
+    # Step 2: Font mapping
+    font_map = {
+        "hi": "NotoSansDevanagari",
+        "mr": "NotoSansDevanagari",
+        "ne": "NotoSansDevanagari",
+        "default": "InterDisplay"
+    }
+    font_family = font_map.get(lang, font_map["default"])
+    font_file = f"{font_family}-Regular.ttf"
+    font_rel_path = f"static/fonts/{font_file}"
+    font_abs_path = os.path.abspath(font_rel_path)
 
-    # Step 3: Wrap the cleaned text inside basic HTML
+    print(f"🔤 Font selected: {font_family}")
+    print(f"📁 Font path: {font_abs_path}")
+    if not os.path.exists(font_abs_path):
+        print("❌ Font file is missing. PDF may fail to render properly.")
+
+    if any(ord(c) > 127 for c in cleaned_text):
+        print("🧪 Non-Latin characters detected. Ensure font supports them.")
+
+    # Step 3: CSS + HTML
+    font_css = f"""
+    @font-face {{
+        font-family: '{font_family}';
+        src: url('{font_rel_path}');
+    }}
+    body {{
+        font-family: '{font_family}', sans-serif;
+        font-size: 16px;
+        line-height: 1.6;
+        color: #1e293b;
+    }}
+    """
     html_content = f"""
     <html>
         <head>
-            <meta charset='utf-8'>
+            <meta charset="utf-8">
             <style>{font_css}</style>
         </head>
         <body>{cleaned_text}</body>
     </html>
     """
 
-    # Step 4: Generate the PDF using WeasyPrint
-    HTML(string=html_content, base_url=".").write_pdf(output_path)
+    try:
+        base_path = os.path.abspath(".")
+        print(f"📝 Writing PDF to: {output_path}")
+        HTML(string=html_content, base_url=base_path).write_pdf(output_path)
 
+        if os.path.exists(output_path):
+            print(f"✅ PDF created at {output_path}")
+            print(f"📦 Size: {os.path.getsize(output_path):,} bytes")
+        else:
+            print("⚠️ No error thrown, but output file not found.")
+    except Exception as e:
+        print("❌ PDF generation failed:", type(e).__name__)
+        print("🪵 Details:", str(e))
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -241,22 +267,39 @@ def home():
         return redirect(url_for("rename"))
 
     return render_template("index.html", error=error, languages=SUPPORTED_FONT_LANGUAGES)
+import time
+from datetime import datetime
 
-# ✅ Async helper function
 def run_translation_async(app, translation_id, translated_text, translated_pdf_path, output_lang, db, Translation):
     with app.app_context():
+        start = time.time()
+        print(f"🧞 Starting async thread for ID: {translation_id}")
+
         try:
-            # ✨ Replace this with your real PDF logic
+            print("🌍 Translated text preview:", translated_text[:150], "...")
             generate_pdf(translated_text, translated_pdf_path, output_lang)
+            duration = time.time() - start
+            file_ok = os.path.exists(translated_pdf_path)
 
-            # Update timestamp if needed
             translation = Translation.query.get(translation_id)
-            translation.timestamp = datetime.utcnow()
-            db.session.commit()
+            if translation:
+                translation.timestamp = datetime.utcnow()
+                translation.duration_seconds = round(duration, 4) if file_ok else None
+                db.session.commit()
 
-            print(f"✅ PDF generated in background: {translated_pdf_path}")
+            if file_ok:
+                print(f"✅ Translation completed for ID {translation_id} in {duration:.2f}s")
+            else:
+                print("⚠️ PDF not found after generation — marked as pending.")
         except Exception as e:
-            print("❌ Error generating renamed PDF:", e)
+            print("❌ Translation thread crashed:", type(e).__name__)
+            print("🪵 Error details:", str(e))
+            translation = Translation.query.get(translation_id)
+            if translation:
+                translation.timestamp = datetime.utcnow()
+                translation.duration_seconds = None
+                db.session.commit()
+
 
 @app.route("/rename", methods=["GET", "POST"])
 @login_required
@@ -351,28 +394,40 @@ def dashboard():
     ist = ZoneInfo("Asia/Kolkata")
 
     for t in translations:
-        # Ensure timestamp is timezone-aware before converting
-        if t.timestamp.tzinfo is None:
-            utc_timestamp = t.timestamp.replace(tzinfo=timezone.utc)
+        # Handle timestamp conversion
+        if t.timestamp:
+            if t.timestamp.tzinfo is None:
+                utc_timestamp = t.timestamp.replace(tzinfo=timezone.utc)
+            else:
+                utc_timestamp = t.timestamp
+            t.local_time = utc_timestamp.astimezone(ist)
+            t.date_only = t.local_time.date()
+            # Ensure all timestamps show seconds consistently
+            t.local_time_str = t.local_time.strftime("%d %b %Y, %I:%M:%S %p")
         else:
-            utc_timestamp = t.timestamp
+            t.local_time = None
+            t.local_time_str = "—"
 
-        # Convert to IST for display
-        t.local_time = utc_timestamp.astimezone(ist)
-        t.date_only = t.local_time.date()
+        # File existence check
+        translated_path = os.path.join(TRANSLATED_FOLDER, t.translated_name)
+        t.file_exists = os.path.exists(translated_path)
 
-        # Optional: print debug data
+        # Duration display
+        t.duration_display = (
+            f"{t.duration_seconds:.2f}s" if t.duration_seconds else "⏳ pending"
+        )
+
         print(">> DASHBOARD DATA:", {
             "original_name": t.original_name,
             "translated_name": t.translated_name,
             "language": t.language,
-            "local_time": t.local_time.strftime("%d %b %Y, %I:%M %p"),
-            "duration": t.duration_seconds,
+            "local_time": t.local_time_str,
+            "duration": t.duration_display,
+            "file_exists": t.file_exists,
             "id": t.id
         })
 
     return render_template("dashboard.html", translations=translations)
-
 
 @app.route("/profile")
 @login_required
@@ -445,7 +500,8 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 import traceback
-import fpdf
+from weasyprint import HTML
+
 UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
 TRANSLATED_FOLDER = os.path.join(os.getcwd(), "translated")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -457,20 +513,11 @@ def run_translation_async(app, translation_id, content, translated_path, target_
             start_time = datetime.utcnow()
             os.makedirs(os.path.dirname(translated_path), exist_ok=True)
 
-            print("📝 Writing PDF to:", translated_path)
-
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_auto_page_break(auto=True, margin=15)
-            pdf.set_font("Arial", size=12)
-            pdf.set_title(f"{target_lang.upper()} Translation")
-
-            for line in content.splitlines():
-                pdf.multi_cell(0, 10, txt=line)
-
-            pdf.output(translated_path)
-
-            print("📄 File created:", os.path.exists(translated_path))
+            try:
+                print("🌍 Translated text preview:", content[:150])
+                generate_pdf(content, translated_path, lang=target_lang)
+            except Exception as e:
+                print("❌ Error generating PDF:", e)
 
             # SQLAlchemy 2.x compatible way:
             translation = db.session.get(Translation, translation_id)
@@ -537,25 +584,23 @@ def translate_file():
     session["processing_file_id"] = new_translation.id
     return redirect(url_for("processing"))
 
-from flask import make_response, send_file
+from flask import send_file, make_response, flash, redirect, url_for
 
 @app.route("/translated/<filename>")
 @login_required
 def translated_pdf(filename):
-    full_path = os.path.join(TRANSLATED_FOLDER, filename)
+    safe_filename = secure_filename(filename)
+    full_path = os.path.join(TRANSLATED_FOLDER, safe_filename)
     if not os.path.exists(full_path):
-        print("❌ File not found at:", full_path)
         flash("Translated file not found or still processing.")
         return redirect(url_for("dashboard"))
 
     print("📁 Serving file:", full_path)
-
-    response = make_response(send_file(full_path))
+    response = make_response(send_from_directory(TRANSLATED_FOLDER, safe_filename))
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
-
 
 @login_required
 def force_processing():
@@ -591,8 +636,6 @@ def assistant():
         response = f"Great question, {name}! I’ll do my best to help with: “{message}”"
 
     return jsonify({'reply': response})
-
-
 
 @app.route("/view/<int:file_id>")
 @login_required

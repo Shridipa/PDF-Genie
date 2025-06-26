@@ -11,28 +11,40 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
 
   <style>
+    :root {
+      --lavender-light: #f3e8ff;
+      --lavender-pale: #ede9fe;
+      --lavender-deep: #c4b5fd;
+      --violet: #7c3aed;
+      --violet-dark: #5b21b6;
+      --plum: #4c1d95;
+      --ink-dark: #312e81;
+    }
+
     body {
       font-family: 'Inter', sans-serif;
-      background-color: #f9fafb;
-      color: #1f2937;
+      background: linear-gradient(145deg, var(--lavender-pale), var(--lavender-light));
+      color: var(--ink-dark);
       display: flex;
       flex-direction: column;
       min-height: 100vh;
     }
 
     .navbar {
-      background-color: #ffffff;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-      border-bottom: 1px solid #e5e7eb;
+      background: linear-gradient(to right, var(--violet), var(--violet-dark));
+      color: #f3e8ff;
+      box-shadow: 0 4px 12px rgba(92, 39, 178, 0.12);
+      border-bottom: 1px solid var(--lavender-deep);
     }
 
     .navbar-brand {
-      font-size: 1.5rem;
+      font-size: 1.6rem;
       font-weight: 800;
+      color: #fff;
     }
 
     .navbar-brand .text-gradient {
-      background: linear-gradient(90deg, #3b82f6, #6366f1);
+      background: linear-gradient(90deg, #ffffff, var(--lavender-deep));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       display: inline-block;
@@ -40,56 +52,89 @@
     }
 
     .navbar-brand i {
-      color: #3b82f6;
+      color: #fef9ff;
       animation: floatLamp 2s ease-in-out infinite;
       transition: transform 0.3s ease;
     }
 
     .navbar-brand:hover i {
-      transform: rotate(-6deg) scale(1.1);
+      transform: rotate(-6deg) scale(1.05);
     }
 
     @keyframes floatLamp {
-      0%, 100% {
-        transform: translateY(0);
-      }
-      50% {
-        transform: translateY(-2px);
-      }
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
     }
 
     .nav-link {
       font-weight: 500;
-      color: #374151 !important;
-      transition: color 0.2s ease-in-out;
+      color: #ede9fe !important;
+      transition: color 0.2s ease;
     }
 
     .nav-link:hover {
-      color: #1d4ed8 !important;
+      color: #fff !important;
     }
 
     .avatar-icon {
-      font-size: 1.3rem;
+      font-size: 1.4rem;
+      color: #e0e7ff;
     }
 
-    main {
+    .dropdown-menu {
+      background-color: var(--lavender-light);
+      border-radius: 12px;
+      border: 1px solid var(--lavender-deep);
+    }
+
+    .dropdown-item {
+      font-weight: 500;
+      color: var(--violet-dark);
+    }
+
+    .dropdown-item:hover {
+      background-color: var(--lavender-pale);
+      color: var(--violet);
+    }
+
+    main.container {
       flex: 1;
-      padding-top: 40px;
+      padding-top: 64px;
     }
 
     footer {
       font-size: 0.875rem;
-      color: #6b7280;
-      background-color: #f3f4f6;
-      border-top: 1px solid #e5e7eb;
+      color: var(--plum);
+      background: linear-gradient(to right, var(--lavender-deep), var(--lavender-light));
+      border-top: 1px solid #dcd4f7;
+    }
+
+    footer a {
+      color: var(--violet);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    .btn-primary {
+      background: linear-gradient(to right, #8b5cf6, var(--violet));
+      color: #fff;
+      border: none;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(to right, var(--violet), var(--violet-dark));
     }
   </style>
 
   {% block head %}{% endblock %}
 </head>
 <body>
+
   <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg navbar-light py-3 sticky-top">
+  <nav class="navbar navbar-expand-lg py-3 sticky-top">
     <div class="container">
       <a class="navbar-brand d-flex align-items-center gap-2" href="/">
         <i class="bi bi-lightbulb-fill fs-4"></i>
@@ -128,7 +173,7 @@
   <!-- Footer -->
   <footer class="text-center py-4 mt-5">
     <div class="container">
-      <p class="mb-0">&copy; {{ current_year }} PDF Genie. Built with 💙.</p>
+      <p class="mb-0">&copy; {{ current_year }} PDF Genie. Crafted with 💜 in shades of violet.</p>
     </div>
   </footer>
 
