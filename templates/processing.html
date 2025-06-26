@@ -1,71 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Processing… | Document Translator</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  
-  <!-- Bootstrap & Icons -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <title>✨ Translating... | Document Genie</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Bootstrap & Fonts -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&display=swap" rel="stylesheet" />
 
   <style>
     body {
-      background: linear-gradient(to bottom right, #edf2ff, #dbeafe);
       font-family: 'Inter', sans-serif;
-      color: #333;
-      min-height: 100vh;
+      background: radial-gradient(circle at top left, #e0f2fe, #d8b4fe);
       display: flex;
       align-items: center;
       justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+      margin: 0;
     }
+
     .processing-box {
-      background: white;
-      padding: 2.5rem;
-      border-radius: 1.25rem;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+      background: #fff;
+      padding: 3rem;
+      border-radius: 1.5rem;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
       text-align: center;
-      max-width: 500px;
+      max-width: 480px;
+      position: relative;
+      z-index: 2;
     }
-    .svg-spinner {
-      width: 64px;
-      height: 64px;
-      margin-bottom: 1.5rem;
-      animation: spin 1.2s linear infinite;
+
+    .floating-lamp {
+      width: 75px;
+      margin-bottom: 2rem;
+      animation: float 3s ease-in-out infinite;
     }
+
+    .spinner {
+      width: 60px;
+      height: 60px;
+      border: 6px solid #cbd5e1;
+      border-top: 6px solid #0ea5e9;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 2rem auto 1rem;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
-    .dots::after {
-      content: '';
-      animation: dots 1.5s infinite steps(4);
+
+    .sparkles {
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle, #e0f2fe 2px, transparent 2px);
+      background-size: 20px 20px;
+      animation: sparkleMove 10s linear infinite;
+      opacity: 0.1;
+      z-index: 1;
     }
-    @keyframes dots {
-      0% { content: ''; }
-      25% { content: '.'; }
-      50% { content: '..'; }
-      75% { content: '...'; }
+
+    @keyframes sparkleMove {
+      0% { background-position: 0 0; }
+      100% { background-position: 100px 100px; }
     }
   </style>
 </head>
 <body>
+  <div class="sparkles"></div>
   <div class="processing-box">
-    <!-- Custom SVG Spinner -->
-    <svg class="svg-spinner text-primary" viewBox="0 0 50 50">
-      <circle class="text-primary" cx="25" cy="25" r="20" fill="none" stroke="#3b82f6" stroke-width="5" stroke-linecap="round" stroke-dasharray="90,150" stroke-dashoffset="0"></circle>
-    </svg>
-
-    <h4 class="fw-bold text-primary">Translating<span class="dots"></span></h4>
-    <p class="text-muted mb-0">We’re working our magic. You’ll be redirected shortly.</p>
-
-    {% if translated_output %}
-      <div class="alert alert-success mt-4">
-        {{ translated_output }}
-      </div>
-    {% endif %}
-
-    <!-- Gentle notification sound -->
+    <img src="https://www.svgrepo.com/show/165358/genie-lamp.svg" alt="Lamp" class="floating-lamp" />
+    <div class="spinner"></div>
+    <h4 class="fw-bold text-primary mb-1">Summoning scrolls from the Cloud Realm...</h4>
+    <p class="text-muted">The spell is almost cast. Hang tight!</p>
     <audio id="notif-sound" src="https://upload.wikimedia.org/wikipedia/commons/1/17/Bell-tone.mp3" preload="auto"></audio>
   </div>
 

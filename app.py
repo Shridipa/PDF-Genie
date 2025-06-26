@@ -2,25 +2,35 @@ import os
 import uuid
 import re
 from datetime import datetime
-from flask import render_template, redirect, url_for, flash, request, session, send_from_directory
-from flask_login import login_user, logout_user, login_required, current_user
+from flask import Flask, render_template, redirect, url_for, flash, request, session, send_from_directory
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_bcrypt import Bcrypt
+from flask_migrate import Migrate
 from fpdf import FPDF
 from deep_translator import GoogleTranslator
 from bs4 import BeautifulSoup
 import pdfplumber
 from weasyprint import HTML, CSS
-from __init__ import create_app, db, bcrypt
 from models import User, Translation
-app = create_app()
-from datetime import datetime
+from extensions import db, bcrypt, login_manager
 
-@app.context_processor
-def inject_now():
-    return {'now': datetime.utcnow()}
-from flask_migrate import Migrate
-migrate = Migrate(app, db)
+TRANSLATED_FOLDER = os.path.join(os.getcwd(), 'translated')
+
+# Create Flask app
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your_secret_key'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+migrate = Migrate()
+
+db.init_app(app)
+bcrypt.init_app(app)
+login_manager.init_app(app)
+migrate.init_app(app, db)
+
+from models import User, Translation  # ✅ import after init_app
+
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB upload limit
-
 
 import tempfile
 TEMP_FOLDER = os.path.join(tempfile.gettempdir(), "pdfgenie-temp")
@@ -232,9 +242,21 @@ def home():
 
     return render_template("index.html", error=error, languages=SUPPORTED_FONT_LANGUAGES)
 
+# ✅ Async helper function
+def run_translation_async(app, translation_id, translated_text, translated_pdf_path, output_lang, db, Translation):
+    with app.app_context():
+        try:
+            # ✨ Replace this with your real PDF logic
+            generate_pdf(translated_text, translated_pdf_path, output_lang)
 
+            # Update timestamp if needed
+            translation = Translation.query.get(translation_id)
+            translation.timestamp = datetime.utcnow()
+            db.session.commit()
 
-from flask import flash
+            print(f"✅ PDF generated in background: {translated_pdf_path}")
+        except Exception as e:
+            print("❌ Error generating renamed PDF:", e)
 
 @app.route("/rename", methods=["GET", "POST"])
 @login_required
@@ -249,7 +271,6 @@ def rename():
 
     temp_file_path = os.path.join(TEMP_FOLDER, f"{temp_file_id}.txt")
 
-    # Try reading the translated text from file
     try:
         with open(temp_file_path, "r", encoding="utf-8") as f:
             translated_text = f.read()
@@ -263,15 +284,19 @@ def rename():
             flash("Please provide a filename.", "warning")
             return redirect(url_for("rename"))
 
-        from werkzeug.utils import secure_filename
         safe_name = secure_filename(custom_name)
         translated_filename = f"{safe_name}.pdf"
+
+        existing = Translation.query.filter_by(
+            user_id=current_user.id,
+            translated_name=translated_filename
+        ).first()
+        if existing:
+            flash("You’ve already used this file name. Please choose a different one.", "danger")
+            return redirect(url_for("rename"))
+
         translated_pdf_path = os.path.join(TRANSLATED_FOLDER, translated_filename)
 
-        # Generate PDF
-        generate_pdf(translated_text, translated_pdf_path, output_lang)
-
-        # Record in database
         translation = Translation(
             user_id=current_user.id,
             original_name=original_name,
@@ -282,7 +307,16 @@ def rename():
         db.session.add(translation)
         db.session.commit()
 
-        # Clean session and delete temp file
+        # Start background thread using translated text content
+        thread = Thread(
+            target=run_translation_async,
+            args=(app, translation.id, translated_text, translated_pdf_path, output_lang, db, Translation)
+        )
+        thread.start()
+
+        session["processing_file_id"] = translation.id
+
+        # Clean up
         session.pop("translated_file_id", None)
         session.pop("original_name", None)
         session.pop("output_lang", None)
@@ -290,43 +324,52 @@ def rename():
         try:
             os.remove(temp_file_path)
         except Exception as e:
-            print(f"Warning: Could not delete temp file: {str(e)}")
+            print(f"⚠️ Could not delete temp file: {str(e)}")
 
-        flash("Translation saved successfully!", "success")
-        return redirect(url_for("dashboard"))
+        flash("Your file is being prepared...", "info")
+        return redirect(url_for("processing"))
 
     return render_template("rename.html", original_name=original_name, output_lang=output_lang)
+
+from datetime import timezone
+
+try:
+    from zoneinfo import ZoneInfo  # Python 3.9+
+except ImportError:
+    from pytz import timezone as ZoneInfo  # fallback for older versions
 
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    raw_translations = (
+    translations = (
         db.session.query(Translation)
         .filter_by(user_id=current_user.id)
         .order_by(Translation.timestamp.desc())
         .all()
     )
 
-    translations = []
+    ist = ZoneInfo("Asia/Kolkata")
 
-    for t in raw_translations:
-        # Handle missing fields defensively
-        if not hasattr(t, 'translated_filename') or not hasattr(t, 'original_filename'):
-            app.logger.warning(f"Translation with ID {t.id} has missing fields and was skipped.")
-            continue
+    for t in translations:
+        # Ensure timestamp is timezone-aware before converting
+        if t.timestamp.tzinfo is None:
+            utc_timestamp = t.timestamp.replace(tzinfo=timezone.utc)
+        else:
+            utc_timestamp = t.timestamp
 
-        # Add a fallback if fields are unexpectedly None
-        t.translated_filename = t.translated_filename or "Unnamed File"
-        t.original_filename = t.original_filename or "Unknown Upload"
-        
-        # Attach a date_only attribute for UI grouping
-        try:
-            t.date_only = t.timestamp.date()
-        except Exception as e:
-            app.logger.warning(f"Invalid timestamp on file ID {t.id}: {e}")
-            t.date_only = None
+        # Convert to IST for display
+        t.local_time = utc_timestamp.astimezone(ist)
+        t.date_only = t.local_time.date()
 
-        translations.append(t)
+        # Optional: print debug data
+        print(">> DASHBOARD DATA:", {
+            "original_name": t.original_name,
+            "translated_name": t.translated_name,
+            "language": t.language,
+            "local_time": t.local_time.strftime("%d %b %Y, %I:%M %p"),
+            "duration": t.duration_seconds,
+            "id": t.id
+        })
 
     return render_template("dashboard.html", translations=translations)
 
@@ -337,59 +380,141 @@ def profile():
     documents = Translation.query.filter_by(user_id=current_user.id).all()
     return render_template("profile.html", user=current_user, documents=documents)
 
+@app.route("/delete/<int:file_id>", methods=["POST"])
+@login_required
+def delete_file(file_id):
+    translation = Translation.query.filter_by(id=file_id, user_id=current_user.id).first()
+
+    if not translation:
+        flash("File not found or access denied.", "danger")
+        return redirect(url_for("profile"))
+
+    # Delete the translated PDF file
+    try:
+        file_path = os.path.join(TRANSLATED_FOLDER, translation.translated_name)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    except Exception as e:
+        print("⚠️ Error deleting file:", e)
+
+    db.session.delete(translation)
+    db.session.commit()
+
+    flash("File deleted successfully.", "success")
+    return redirect(url_for("profile"))
+
 @app.route("/processing")
 @login_required
 def processing():
     file_id = session.get("processing_file_id")
+    print("🧭 Processing ID from session:", file_id)
 
     if not file_id:
-        flash("Processing session expired.")
+        flash("Processing session expired.", "warning")
         return redirect(url_for("dashboard"))
 
-    # 🧠 Optional: Fetch file details if needed
     translation = Translation.query.filter_by(
         id=file_id,
         user_id=current_user.id
     ).first()
 
     if not translation:
-        flash("Translation not found.")
+        flash("Translation not found.", "danger")
         return redirect(url_for("dashboard"))
 
-    return render_template("processing.html", translated_output=translation.translated_filename)
+    translated_path = os.path.join(TRANSLATED_FOLDER, translation.translated_name)
+    file_ready = os.path.exists(translated_path)
 
+    if file_ready:
+        session.pop("processing_file_id", None)
 
+    return render_template(
+        "processing.html",
+        still_processing=not file_ready,
+        translated_output=translation.translated_name if file_ready else None,
+        original_name=translation.original_name,
+        output_lang=translation.language,
+        duration=translation.duration_seconds
+    )
+
+from datetime import datetime
+from threading import Thread
+from flask import (
+    Flask, request, redirect, url_for, flash, session,
+    send_from_directory, render_template
+)
 from werkzeug.utils import secure_filename
+import traceback
+import fpdf
+UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
+TRANSLATED_FOLDER = os.path.join(os.getcwd(), "translated")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(TRANSLATED_FOLDER, exist_ok=True)
 
+def run_translation_async(app, translation_id, content, translated_path, target_lang, db, Translation):
+    with app.app_context():
+        try:
+            start_time = datetime.utcnow()
+            os.makedirs(os.path.dirname(translated_path), exist_ok=True)
 
+            print("📝 Writing PDF to:", translated_path)
+
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_auto_page_break(auto=True, margin=15)
+            pdf.set_font("Arial", size=12)
+            pdf.set_title(f"{target_lang.upper()} Translation")
+
+            for line in content.splitlines():
+                pdf.multi_cell(0, 10, txt=line)
+
+            pdf.output(translated_path)
+
+            print("📄 File created:", os.path.exists(translated_path))
+
+            # SQLAlchemy 2.x compatible way:
+            translation = db.session.get(Translation, translation_id)
+            if translation:
+                translation.timestamp = datetime.utcnow()
+                translation.duration_seconds = (translation.timestamp - start_time).total_seconds()
+                db.session.commit()
+                print(f"📦 Updated DB for ID {translation_id}")
+            else:
+                print(f"⚠️ Translation ID {translation_id} not found")
+
+        except Exception:
+            print("❌ Error in async translation thread:")
+            traceback.print_exc()
+
+# === Upload + Start Translation Route ===
 @app.route("/translate", methods=["POST"])
 @login_required
 def translate_file():
     uploaded_file = request.files.get("file")
     target_lang = request.form.get("target_lang")
-    new_filename = request.form.get("new_filename")
+    new_filename = (request.form.get("new_filename") or "").strip()
 
     if not uploaded_file or not target_lang:
         flash("Missing file or language.")
         return redirect(url_for("dashboard"))
 
-    # Save uploaded file
     filename = secure_filename(uploaded_file.filename)
     original_path = os.path.join(UPLOAD_FOLDER, filename)
-    uploaded_file.save(original_path)
+    try:
+        uploaded_file.save(original_path)
+    except Exception as e:
+        flash("Failed to save uploaded file.")
+        print("❌ File save error:", e)
+        return redirect(url_for("dashboard"))
 
-    # Generate translated filename
     name_root, ext = os.path.splitext(filename)
-    translated_name = f"{new_filename or name_root}_translated{ext}"
+    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    translated_name = f"{new_filename or name_root}_translated_{timestamp}{ext}"
     translated_path = os.path.join(TRANSLATED_FOLDER, translated_name)
 
-    # 🧠 Perform translation logic here
-    # (Assuming you've implemented it already)
-
-    # Save to DB
     new_translation = Translation(
-        original_filename=filename,
-        translated_filename=translated_name,
+        original_name=filename,
+        translated_name=translated_name,
         language=target_lang,
         timestamp=datetime.utcnow(),
         user_id=current_user.id
@@ -397,11 +522,52 @@ def translate_file():
     db.session.add(new_translation)
     db.session.commit()
 
-    # ✅ Store file ID in session for /processing
-    session["processing_file_id"] = new_translation.id
+    print("✅ Translation saved:", new_translation.id, translated_name)
 
+    Thread(target=run_translation_async, args=(
+        app,
+        new_translation.id,
+        original_path,
+        translated_path,
+        translated_name,
+        target_lang,
+        db
+    )).start()
+
+    session["processing_file_id"] = new_translation.id
     return redirect(url_for("processing"))
 
+from flask import make_response, send_file
+
+@app.route("/translated/<filename>")
+@login_required
+def translated_pdf(filename):
+    full_path = os.path.join(TRANSLATED_FOLDER, filename)
+    if not os.path.exists(full_path):
+        print("❌ File not found at:", full_path)
+        flash("Translated file not found or still processing.")
+        return redirect(url_for("dashboard"))
+
+    print("📁 Serving file:", full_path)
+
+    response = make_response(send_file(full_path))
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
+@login_required
+def force_processing():
+    translation = Translation.query.filter_by(user_id=current_user.id).order_by(Translation.id.desc()).first()
+
+    if not translation:
+        flash("No translation found for current user.")
+        return redirect(url_for("dashboard"))
+
+    session["processing_file_id"] = translation.id
+    flash("Session set. Redirecting to processing preview...")
+    return redirect(url_for("processing"))
 
 from flask import jsonify
 @app.route('/assistant', methods=['POST'])
@@ -595,7 +761,6 @@ def retranslate(file_id):
 
 
 
-if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
+if __name__ == '__main__':
     app.run(debug=True)
+

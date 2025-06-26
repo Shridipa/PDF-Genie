@@ -9,7 +9,7 @@
        style="background: linear-gradient(135deg, #3b82f6, #60a5fa);">
     <div class="row align-items-center">
       <div class="col-lg-8">
-        <h2 class="fw-bold mb-2">Welcome back, {{ current_user.name }} 👋</h2>
+        <h2 class="fw-bold mb-2">Welcome back, {{ current_user.name or 'User' }} 👋</h2>
         <p class="mb-0">
           You’ve translated <strong>{{ translations|length }}</strong> file{{ translations|length != 1 and 's' or '' }}
           across <strong>{{ translations | map(attribute='language') | unique | list | length }}</strong> language{{ translations | map(attribute='language') | unique | list | length != 1 and 's' or '' }}.
@@ -45,10 +45,10 @@
     {% for date, items in grouped %}
       <div class="mt-5">
         <h5 class="fw-semibold text-secondary mb-3">
-          <i class="bi bi-calendar-check me-2 text-muted"></i>{{ date.strftime('%d %B %Y') }}
+          <i class="bi bi-calendar-check me-2 text-muted"></i>
+          {{ date.strftime('%d %B %Y') }} <span class="text-muted small">IST</span>
         </h5>
 
-        {% if items %}
         <div class="row row-cols-1 row-cols-md-2 g-4">
           {% for t in items %}
           <div class="col">
@@ -68,7 +68,8 @@
               </div>
 
               <p class="text-muted small mb-4">
-                <i class="bi bi-clock me-1"></i> {{ t.timestamp.strftime('%I:%M %p') }}
+                <i class="bi bi-clock me-1"></i> {{ t.local_time.strftime('%I:%M %p') }}
+                {% if t.duration_seconds %} — ⏱ {{ t.duration_seconds | round(1) }}s {% endif %}
               </p>
 
               <div class="d-flex flex-wrap gap-2">
@@ -90,7 +91,6 @@
           </div>
           {% endfor %}
         </div>
-        {% endif %}
       </div>
     {% endfor %}
   {% else %}
@@ -107,7 +107,7 @@
 
 </div>
 
-<!-- FAB: Floating Action Button -->
+<!-- Floating Action Button -->
 <a href="{{ url_for('home') }}"
    class="btn btn-primary rounded-circle shadow-lg position-fixed bottom-0 end-0 m-4 d-flex justify-content-center align-items-center"
    style="width: 56px; height: 56px;">

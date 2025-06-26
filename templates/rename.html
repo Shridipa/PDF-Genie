@@ -4,11 +4,26 @@
 {% block content %}
 <div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
   <div class="card shadow-lg p-4 border-0 rounded-4" style="max-width: 500px; width: 100%;">
+    
     <div class="text-center mb-4">
       <i class="bi bi-magic text-primary" style="font-size: 2.5rem;"></i>
       <h4 class="fw-semibold mt-3">Give Your Genie-Crafted PDF a Name</h4>
       <p class="text-muted small">Name it anything you like — we’ll package it up and send it your way!</p>
     </div>
+
+    <!-- 🔔 Flash messages (duplicate names, missing name, etc.) -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-3">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
 
     <form method="POST" novalidate>
       <div class="mb-3">
@@ -26,3 +41,4 @@
   </div>
 </div>
 {% endblock %}
+
