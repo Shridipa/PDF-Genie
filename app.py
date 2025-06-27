@@ -89,6 +89,10 @@ def restore_terms(text, placeholders):
     return text
 
 import os
+os.environ["FONTCONFIG_FILE"] = "/dev/null"
+import os
+import html
+from base64 import b64encode
 from weasyprint import HTML
 
 def generate_pdf(text, output_path, lang="en"):
@@ -96,10 +100,10 @@ def generate_pdf(text, output_path, lang="en"):
         print("⚠️ Translated text is empty. Skipping PDF generation.")
         return
 
-    # Step 1: Replace newline characters with HTML <br>
-    cleaned_text = text.replace('\n', '<br>')
+    # Step 1: Escape HTML entities and format line breaks
+    cleaned_text = html.escape(text).replace('\n', '<br>')
 
-    # Step 2: Font mapping
+    # Step 2: Define font based on language
     font_map = {
         "hi": "NotoSansDevanagari",
         "mr": "NotoSansDevanagari",
@@ -108,30 +112,43 @@ def generate_pdf(text, output_path, lang="en"):
     }
     font_family = font_map.get(lang, font_map["default"])
     font_file = f"{font_family}-Regular.ttf"
-    font_rel_path = f"static/fonts/{font_file}"
-    font_abs_path = os.path.abspath(font_rel_path)
+    font_path = os.path.abspath(os.path.join("static", "fonts", font_file))
 
     print(f"🔤 Font selected: {font_family}")
-    print(f"📁 Font path: {font_abs_path}")
-    if not os.path.exists(font_abs_path):
-        print("❌ Font file is missing. PDF may fail to render properly.")
+    print(f"📁 Font path: {font_path}")
 
-    if any(ord(c) > 127 for c in cleaned_text):
-        print("🧪 Non-Latin characters detected. Ensure font supports them.")
+    # Step 3: Embed font with base64 or fallback to system default
+    if not os.path.exists(font_path):
+        print("❌ Font file is missing. Falling back to system sans-serif.")
+        font_css = """
+        body {
+            font-family: sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #1e293b;
+        }
+        """
+    else:
+        if any(ord(char) > 127 for char in cleaned_text):
+            print("🧪 Non-Latin characters detected. Embedding Unicode font.")
 
-    # Step 3: CSS + HTML
-    font_css = f"""
-    @font-face {{
-        font-family: '{font_family}';
-        src: url('{font_rel_path}');
-    }}
-    body {{
-        font-family: '{font_family}', sans-serif;
-        font-size: 16px;
-        line-height: 1.6;
-        color: #1e293b;
-    }}
-    """
+        with open(font_path, "rb") as f:
+            encoded_font = b64encode(f.read()).decode("utf-8")
+
+        font_css = f"""
+        @font-face {{
+            font-family: '{font_family}';
+            src: url(data:font/truetype;charset=utf-8;base64,{encoded_font}) format('truetype');
+        }}
+        body {{
+            font-family: '{font_family}', sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #1e293b;
+        }}
+        """
+
+    # Step 4: Build the HTML content
     html_content = f"""
     <html>
         <head>
@@ -142,16 +159,17 @@ def generate_pdf(text, output_path, lang="en"):
     </html>
     """
 
+    # Step 5: Write the PDF
     try:
-        base_path = os.path.abspath(".")
         print(f"📝 Writing PDF to: {output_path}")
-        HTML(string=html_content, base_url=base_path).write_pdf(output_path)
+        HTML(string=html_content, base_url=os.getcwd()).write_pdf(output_path)
 
         if os.path.exists(output_path):
             print(f"✅ PDF created at {output_path}")
             print(f"📦 Size: {os.path.getsize(output_path):,} bytes")
         else:
             print("⚠️ No error thrown, but output file not found.")
+
     except Exception as e:
         print("❌ PDF generation failed:", type(e).__name__)
         print("🪵 Details:", str(e))
