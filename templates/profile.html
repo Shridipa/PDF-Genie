@@ -11,7 +11,6 @@
       background: linear-gradient(135deg, #f3e8ff, #e0f2fe);
       font-family: 'Segoe UI', sans-serif;
     }
-
     .profile-wrapper {
       min-height: 100vh;
       display: flex;
@@ -19,7 +18,6 @@
       justify-content: center;
       padding: 2rem;
     }
-
     .profile-card {
       background: #ffffff;
       padding: 3.5rem 3rem 3rem;
@@ -30,47 +28,39 @@
       width: 100%;
       transition: all 0.3s ease;
     }
-
     .profile-header {
       text-align: center;
       margin-bottom: 2rem;
     }
-
     .profile-header h1 {
       font-size: 2.6rem;
       font-weight: 700;
       color: #7c3aed;
       margin-bottom: 0.25rem;
     }
-
     .profile-header p {
       color: #6b7280;
       font-size: 1.1rem;
       margin: 0;
     }
-
     .profile-info {
       margin-bottom: 2.5rem;
       padding: 0 0.5rem;
     }
-
     .profile-info .mb-3 {
       margin-bottom: 1.25rem !important;
     }
-
     .profile-info .label {
       font-weight: 600;
       color: #4b5563;
       font-size: 1.1rem;
     }
-
     .profile-info .value {
       color: #374151;
       font-size: 1.1rem;
       display: inline-block;
       margin-left: 0.5rem;
     }
-
     .doc-placeholder {
       background-color: #f9f5ff;
       border: 1px dashed #c4b5fd;
@@ -81,7 +71,6 @@
       font-size: 1.05rem;
       margin-bottom: 2rem;
     }
-
     .btn-purple {
       background: linear-gradient(to right, #7c3aed, #6366f1);
       border: none;
@@ -89,7 +78,6 @@
       font-size: 1rem;
       padding: 0.6rem 1.5rem;
     }
-
     .btn-purple:hover {
       background: linear-gradient(to right, #6d28d9, #4f46e5);
     }
@@ -106,7 +94,7 @@
       <div class="profile-info">
         <div class="mb-3">
           <span class="label">Name:</span>
-          <span class="value">{{ current_user.name }}</span>
+          <span class="value">{{ current_user.name or current_user.username }}</span>
         </div>
         <div class="mb-3">
           <span class="label">Email:</span>

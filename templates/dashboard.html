@@ -10,7 +10,7 @@
          style="background: linear-gradient(135deg, #a78bfa, #60a5fa);">
       <div class="row align-items-center">
         <div class="col-lg-8">
-          <h2 class="fw-bold display-5 mb-2">Welcome back, {{ current_user.name or 'User' }} 👋</h2>
+          <h2 class="fw-bold display-5 mb-2">Welcome back, {{ current_user.name or current_user.username or 'User' }} 👋</h2>
           <p class="lead mb-0">
             You’ve translated <strong>{{ translations|length }}</strong> file{{ translations|length != 1 and 's' or '' }}
             across <strong>{{ translations | map(attribute='language') | unique | list | length }}</strong> language{{ translations | map(attribute='language') | unique | list | length != 1 and 's' or '' }}.

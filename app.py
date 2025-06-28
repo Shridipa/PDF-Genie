@@ -3,7 +3,6 @@ import uuid
 import re
 from datetime import datetime
 from flask import Flask, render_template, redirect, url_for, flash, request, session, send_from_directory
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_bcrypt import Bcrypt
 from flask_migrate import Migrate
@@ -13,28 +12,117 @@ from bs4 import BeautifulSoup
 import pdfplumber
 from weasyprint import HTML, CSS
 from models import User, Translation
-from extensions import db, bcrypt, login_manager
-
-TRANSLATED_FOLDER = os.path.join(os.getcwd(), 'translated')
-
-# Create Flask app
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
-migrate = Migrate()
-
-db.init_app(app)
-bcrypt.init_app(app)
-login_manager.init_app(app)
-migrate.init_app(app, db)
-
-from models import User, Translation  # ✅ import after init_app
-
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB upload limit
+from flask_mail import Mail, Message
+from itsdangerous import URLSafeTimedSerializer
+from werkzeug.security import generate_password_hash
+from flask import request, redirect, url_for, flash, render_template
+from extensions import db, mail  # Make sure these are properly initialized elsewhere
+from itsdangerous import URLSafeTimedSerializer
+from extensions import bcrypt  # ✅ if using modular setup
+from flask import send_file, make_response, flash, redirect, url_for
+from flask.cli import with_appcontext
+import click
 
 import tempfile
 TEMP_FOLDER = os.path.join(tempfile.gettempdir(), "pdfgenie-temp")
 os.makedirs(TEMP_FOLDER, exist_ok=True)
+app = Flask(__name__)
+mail = Mail()
+app.config.update(
+    MAIL_SERVER='smtp.gmail.com',
+    MAIL_PORT=587,
+    MAIL_USE_TLS=True,
+    MAIL_USE_SSL=False,
+    MAIL_USERNAME='dhar.shridipa@gmail.com',
+    MAIL_PASSWORD='bwht utvf pvlz pmde'
+)
+
+app.config['SECRET_KEY'] = 'your-actual-secret-key'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+mail.init_app(app)
+db.init_app(app)
+# Optionally set the FLASK_APP env var, or do this instead:
+@app.cli.command("create-db")
+@with_appcontext
+def create_db():
+    db.create_all()
+    click.echo("✅ Database tables created.")
+
+migrate = Migrate(app, db)
+
+from extensions import login_manager
+login_manager.init_app(app)
+# Token serializer
+s = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
+def send_reset_email(user):
+    token = s.dumps(user.email, salt='password-reset-salt')
+    link = url_for('reset_password', token=token, _external=True)
+
+    msg = Message(
+        subject='Password Reset Request',
+        sender='noreply@pdfgenie.com',
+        recipients=[user.email]
+    )
+    msg.body = f'''Hi {user.username or user.email},
+
+To reset your password, click the link below:
+{link}
+
+If you did not request this, please ignore this email.
+'''
+    with app.app_context():
+        mail.send(msg)
+
+
+@app.route("/forgot", methods=["GET", "POST"])
+def forgot_password():
+    # Clear any leftover flash messages from previous pages (e.g. login errors)
+    session.pop("_flashes", None)
+
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        user = User.query.filter_by(email=email).first()
+
+        if user:
+            send_reset_email(user)  # your function that sends the reset token/link
+
+        # Always flash the same message — whether user exists or not
+        flash("📬 If your email is registered, we’ve sent a reset link! Please check your inbox (and spam folder too).", "info")
+        return redirect(url_for("login"))
+
+    return render_template("forgot_password.html")
+
+# Route to complete password reset
+@app.route("/reset/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    try:
+        email = s.loads(token, salt='password-reset-salt', max_age=3600)
+    except:
+        flash("The reset link is invalid or has expired.", "danger")
+        return redirect(url_for("login"))
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        flash("User not found.", "warning")
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        password = request.form.get("password")
+        confirm = request.form.get("confirm_password")
+
+        if password != confirm:
+            flash("Passwords do not match. Please try again.", "warning")
+            return redirect(request.url)
+
+        user.password = bcrypt.generate_password_hash(password).decode("utf-8")
+        db.session.commit()
+
+        flash("✅ Your password has been updated! You can now log in.", "success")
+        return redirect(url_for("login"))
+
+    return render_template("reset_password.html")
 
 def inject_user_info():
     from flask_login import current_user
@@ -87,10 +175,7 @@ def restore_terms(text, placeholders):
     for placeholder, term in placeholders.items():
         text = re.sub(re.escape(placeholder), term, text, flags=re.IGNORECASE)
     return text
-
-import os
 os.environ["FONTCONFIG_FILE"] = "/dev/null"
-import os
 import html
 from base64 import b64encode
 from weasyprint import HTML
@@ -602,7 +687,6 @@ def translate_file():
     session["processing_file_id"] = new_translation.id
     return redirect(url_for("processing"))
 
-from flask import send_file, make_response, flash, redirect, url_for
 
 @app.route("/translated/<filename>")
 @login_required
@@ -819,9 +903,22 @@ def retranslate(file_id):
         languages=SUPPORTED_FONT_LANGUAGES
     )
 
+if __name__ == "__main__":
+    with app.app_context():
+        from models import User
+        user = User.query.filter_by(email="dhar.shridipa@gmail.com").first()
+        if user:
+            user.password = bcrypt.generate_password_hash("new_secure_password").decode("utf-8")
+            db.session.commit()
+            print("✅ Password successfully updated.")
+        else:
+            print("⚠️ User not found.")
+    
+    # Optionally, run the app
+    # app.run(debug=True)
 
-
-
-if __name__ == '__main__':
+        db.create_all()
     app.run(debug=True)
+
+
 
