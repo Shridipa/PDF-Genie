@@ -16,9 +16,9 @@ from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer
 from werkzeug.security import generate_password_hash
 from flask import request, redirect, url_for, flash, render_template
-from extensions import db, mail  # Make sure these are properly initialized elsewhere
+from extensions import db, mail 
 from itsdangerous import URLSafeTimedSerializer
-from extensions import bcrypt  # ✅ if using modular setup
+from extensions import bcrypt  
 from flask import send_file, make_response, flash, redirect, url_for
 from flask.cli import with_appcontext
 import click
@@ -26,15 +26,22 @@ import click
 import tempfile
 TEMP_FOLDER = os.path.join(tempfile.gettempdir(), "pdfgenie-temp")
 os.makedirs(TEMP_FOLDER, exist_ok=True)
+TRANSLATED_FOLDER = os.path.join(os.getcwd(), "translated")
+os.makedirs(TRANSLATED_FOLDER, exist_ok=True)
+
 app = Flask(__name__)
+app.config['TRANSLATED_FOLDER'] = TRANSLATED_FOLDER
+app.config['TEMP_FOLDER'] = TEMP_FOLDER
+# ... (plus your other app.config values)
+
 mail = Mail()
 app.config.update(
     MAIL_SERVER='smtp.gmail.com',
     MAIL_PORT=587,
     MAIL_USE_TLS=True,
     MAIL_USE_SSL=False,
-    MAIL_USERNAME='dhar.shridipa@gmail.com',
-    MAIL_PASSWORD='bwht utvf pvlz pmde'
+    MAIL_USERNAME='pdfgenieweb@gmail.com',
+    MAIL_PASSWORD='ieha elvg qupb vldw'
 )
 
 app.config['SECRET_KEY'] = 'your-actual-secret-key'
@@ -124,6 +131,7 @@ def reset_password(token):
 
     return render_template("reset_password.html")
 
+technical_terms = globals().get("TECHNICAL_TERMS", [])
 def inject_user_info():
     from flask_login import current_user
     name = None
@@ -403,7 +411,6 @@ def run_translation_async(app, translation_id, translated_text, translated_pdf_p
                 translation.duration_seconds = None
                 db.session.commit()
 
-
 @app.route("/rename", methods=["GET", "POST"])
 @login_required
 def rename():
@@ -412,7 +419,7 @@ def rename():
     original_name = session.get("original_name")
 
     if not temp_file_id or not output_lang or not original_name:
-        flash("Session expired or missing data. Please try again.", "danger")
+        flash("Session expired or missing data.", "danger")
         return redirect(url_for("home"))
 
     temp_file_path = os.path.join(TEMP_FOLDER, f"{temp_file_id}.txt")
@@ -420,27 +427,24 @@ def rename():
     try:
         with open(temp_file_path, "r", encoding="utf-8") as f:
             translated_text = f.read()
-    except Exception as e:
-        flash(f"Could not load translated text: {str(e)}", "danger")
+    except Exception:
+        flash("Could not load translated content.", "danger")
         return redirect(url_for("home"))
 
     if request.method == "POST":
+        name_choice = request.form.get("name_choice")
         custom_name = request.form.get("custom_name", "").strip()
-        if not custom_name:
-            flash("Please provide a filename.", "warning")
-            return redirect(url_for("rename"))
 
-        safe_name = secure_filename(custom_name)
+        if name_choice == "custom":
+            if not custom_name:
+                flash("Please enter a custom filename.", "warning")
+                return redirect(url_for("rename"))
+            safe_name = secure_filename(custom_name)
+        else:
+            base_name = Path(original_name).stem
+            safe_name = secure_filename(f"{base_name}-{output_lang}")
+
         translated_filename = f"{safe_name}.pdf"
-
-        existing = Translation.query.filter_by(
-            user_id=current_user.id,
-            translated_name=translated_filename
-        ).first()
-        if existing:
-            flash("You’ve already used this file name. Please choose a different one.", "danger")
-            return redirect(url_for("rename"))
-
         translated_pdf_path = os.path.join(TRANSLATED_FOLDER, translated_filename)
 
         translation = Translation(
@@ -453,7 +457,7 @@ def rename():
         db.session.add(translation)
         db.session.commit()
 
-        # Start background thread using translated text content
+        # Start PDF generation
         thread = Thread(
             target=run_translation_async,
             args=(app, translation.id, translated_text, translated_pdf_path, output_lang, db, Translation)
@@ -461,18 +465,15 @@ def rename():
         thread.start()
 
         session["processing_file_id"] = translation.id
-
-        # Clean up
         session.pop("translated_file_id", None)
         session.pop("original_name", None)
         session.pop("output_lang", None)
 
         try:
             os.remove(temp_file_path)
-        except Exception as e:
-            print(f"⚠️ Could not delete temp file: {str(e)}")
+        except Exception:
+            pass
 
-        flash("Your file is being prepared...", "info")
         return redirect(url_for("processing"))
 
     return render_template("rename.html", original_name=original_name, output_lang=output_lang)
@@ -544,6 +545,8 @@ def delete_file(file_id):
     translation = Translation.query.filter_by(id=file_id, user_id=current_user.id).first()
 
     if not translation:
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return "Not found", 404
         flash("File not found or access denied.", "danger")
         return redirect(url_for("profile"))
 
@@ -558,8 +561,13 @@ def delete_file(file_id):
     db.session.delete(translation)
     db.session.commit()
 
-    flash("File deleted successfully.", "success")
-    return redirect(url_for("profile"))
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return "", 200  # ✅ No redirect, just a success response
+    else:
+        flash("File deleted successfully.", "success")
+        return redirect(url_for("dashboard"))
+
+from flask import jsonify
 
 @app.route("/processing")
 @login_required
@@ -568,32 +576,95 @@ def processing():
     print("🧭 Processing ID from session:", file_id)
 
     if not file_id:
+        if request.args.get("check"):
+            return jsonify({"ready": False})
         flash("Processing session expired.", "warning")
         return redirect(url_for("dashboard"))
 
-    translation = Translation.query.filter_by(
-        id=file_id,
-        user_id=current_user.id
-    ).first()
-
+    translation = Translation.query.filter_by(id=file_id, user_id=current_user.id).first()
     if not translation:
+        if request.args.get("check"):
+            return jsonify({"ready": False})
         flash("Translation not found.", "danger")
         return redirect(url_for("dashboard"))
 
-    translated_path = os.path.join(TRANSLATED_FOLDER, translation.translated_name)
+    translated_path = os.path.join(app.config['TRANSLATED_FOLDER'], translation.translated_name)
     file_ready = os.path.exists(translated_path)
+
+    if request.args.get("check"):
+        # Respond to AJAX polling from processing.html
+        return jsonify({
+            "ready": file_ready,
+            "preview_url": url_for("preview", file_id=translation.id)
+        })
 
     if file_ready:
         session.pop("processing_file_id", None)
+        return redirect(url_for("preview", file_id=translation.id))
 
     return render_template(
         "processing.html",
-        still_processing=not file_ready,
-        translated_output=translation.translated_name if file_ready else None,
+        still_processing=True,
+        translated_output=None,
         original_name=translation.original_name,
         output_lang=translation.language,
         duration=translation.duration_seconds
     )
+
+from PyPDF2 import PdfReader
+from flask import abort
+
+@app.route('/preview/<int:file_id>')
+@login_required
+def preview(file_id):
+    t = Translation.query.get_or_404(file_id)
+    if t.user_id != current_user.id:
+        flash("Access denied.", "danger")
+        return redirect(url_for("dashboard"))
+
+    pdf_path = os.path.join(app.config['TRANSLATED_FOLDER'], t.translated_name)
+    if not os.path.exists(pdf_path):
+        flash("Translated file not found.", "danger")
+        return redirect(url_for("dashboard"))
+
+    from PyPDF2 import PdfReader
+    reader = PdfReader(pdf_path)
+    page_count = len(reader.pages)
+    size_mb = round(os.path.getsize(pdf_path) / (1024 * 1024), 2)
+
+    # ➕ Fix: set .local_time and .duration_display
+    from zoneinfo import ZoneInfo
+    from datetime import timezone
+    if t.timestamp:
+        ist = ZoneInfo("Asia/Kolkata")
+        t.local_time = (t.timestamp.replace(tzinfo=timezone.utc)
+                        if t.timestamp.tzinfo is None
+                        else t.timestamp).astimezone(ist)
+    else:
+        t.local_time = None
+    t.duration_display = f"{t.duration_seconds:.2f} seconds" if t.duration_seconds else "⏳ pending"
+    t.file_exists = os.path.exists(pdf_path)
+
+    return render_template('preview.html', t=t, page_count=page_count, size_mb=size_mb)
+
+@app.route("/delete-from-preview/<int:file_id>", methods=["POST"])
+@login_required
+def delete_from_preview(file_id):
+    translation = Translation.query.filter_by(id=file_id, user_id=current_user.id).first()
+
+    if not translation:
+        flash("File not found or access denied.", "danger")
+        return redirect(url_for("dashboard"))
+
+    translated_path = os.path.join(app.config['TRANSLATED_FOLDER'], translation.translated_name)
+    if os.path.exists(translated_path):
+        os.remove(translated_path)
+
+    db.session.delete(translation)
+    db.session.commit()
+
+    flash("Translation deleted successfully.", "info")
+    return redirect(url_for("dashboard"))
 
 from datetime import datetime
 from threading import Thread
@@ -688,20 +759,32 @@ def translate_file():
     return redirect(url_for("processing"))
 
 
+from flask import send_from_directory, make_response, flash, redirect, url_for
+from werkzeug.utils import secure_filename
+import os
+
 @app.route("/translated/<filename>")
 @login_required
 def translated_pdf(filename):
     safe_filename = secure_filename(filename)
-    full_path = os.path.join(TRANSLATED_FOLDER, safe_filename)
-    if not os.path.exists(full_path):
-        flash("Translated file not found or still processing.")
+    translated_folder = app.config.get("TRANSLATED_FOLDER", TRANSLATED_FOLDER)
+    file_path = os.path.join(translated_folder, safe_filename)
+
+    if not os.path.exists(file_path):
+        flash("Translated file not found or still processing.", "warning")
         return redirect(url_for("dashboard"))
 
-    print("📁 Serving file:", full_path)
-    response = make_response(send_from_directory(TRANSLATED_FOLDER, safe_filename))
+    print("📁 Serving file:", file_path)
+
+    response = make_response(send_from_directory(
+        directory=translated_folder,
+        path=safe_filename,
+        as_attachment=False
+    ))
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
+
     return response
 
 @login_required
@@ -777,10 +860,13 @@ def delete_pdf(file_id):
     flash("Translation deleted.")
     return redirect(url_for("dashboard"))
 
+from pathlib import Path
 
 @app.route("/retranslate/<int:file_id>", methods=["GET", "POST"])
 @login_required
 def retranslate(file_id):
+    session.pop("_flashes", None)
+
     translation = db.session.get(Translation, file_id)
     if not translation or translation.user_id != current_user.id:
         flash("Unauthorized or not found.")
@@ -792,23 +878,23 @@ def retranslate(file_id):
         "mr": "🇮🇳 Marathi", "ne": "🇳🇵 Nepali", "zh-CN": "🇨🇳 Chinese (Simplified)"
     }
 
-    technical_terms = globals().get("TECHNICAL_TERMS", [])
     FAQ_RESPONSES = {
-    "upload": "You can upload PDF, DOCX, TXT, or HTML files from the homepage. Avoid password-protected or corrupted files.",
-    "file type": "Supported formats include .pdf, .docx, .txt, and .html. Scanned files without selectable text aren't ideal unless OCR is supported.",
-    "language": "We currently support English, Hindi, Marathi, Nepali, French, German, Italian, Chinese (Simplified), and Spanish.",
-    "translate": "We extract text from your file, use Google Translate to convert it into your selected language, and generate a styled PDF with matching fonts.",
-    "retranslate": "Retranslation allows you to fix errors, choose a new language, or regenerate a clearer version of your document. Use the 🔁 button on your dashboard.",
-    "font": "Fonts like DejaVu Sans are automatically chosen based on the selected output language to ensure proper rendering.",
-    "view": "Your translated files appear in the Dashboard. You can view, download, retranslate, or delete them at any time.",
-    "account": "Login is required to upload and manage files to ensure your content stays private and secure.",
-    "download": "Use the ⬇ Download button in your Dashboard to save translated documents to your device.",
-    "missing file": "If your original file is missing, re-upload it from the homepage to enable retranslation.",
-    "book": "Yes, you can translate entire books up to 32MB in size. Longer texts are split into chunks to preserve flow and formatting.",
-    "file size": "Currently, uploads up to 32MB are supported. We recommend keeping file sizes below that to ensure fast and stable performance.",
-    "help": "I'm here to assist with uploading, translating, font issues, errors, and how to use the Dashboard — just ask!"
-}
-    # Reupload handler (before checking if file exists)
+        "upload": "You can upload PDF, DOCX, TXT, or HTML files from the homepage...",
+        "file type": "Supported formats include .pdf, .docx, .txt, and .html...",
+        "language": "We currently support English, Hindi, Marathi, Nepali, etc.",
+        "translate": "We extract text, translate it, and generate a styled PDF.",
+        "retranslate": "Fix errors, choose a new language, or regenerate a cleaner PDF.",
+        "font": "Fonts are chosen automatically based on output language.",
+        "view": "Translated files appear in your Dashboard with download options.",
+        "account": "Login keeps your content private and secure.",
+        "download": "Click the ⬇ icon in the Dashboard to download your file.",
+        "missing file": "If your original file is gone, you can upload it again.",
+        "book": "You can translate books up to 32MB. Text is split into chunks.",
+        "file size": "Files up to 32MB are supported for best performance.",
+        "help": "I'm here to help with translation, fonts, UI questions, and more!"
+    }
+
+    # 📤 Handle reupload before retranslation
     if "reupload_submit" in request.form and "reupload_file" in request.files:
         file = request.files["reupload_file"]
         filename = translation.original_name
@@ -818,22 +904,13 @@ def retranslate(file_id):
         return redirect(url_for("retranslate", file_id=file_id))
 
     if request.method == "POST":
-        # Assistant response mode
+        # 💬 AI FAQ Assistant mode
         if "user_query" in request.form:
             user_query = request.form.get("user_query", "").lower()
-            assistant_reply = None
-
-            for keyword, response in FAQ_RESPONSES.items():
-                if keyword in user_query:
-                    assistant_reply = response
-                    break
-
-            if not assistant_reply:
-                assistant_reply = (
-                    "I'm here to assist with PDF Genie — uploading, translating, retranslation, fonts, and dashboard questions. "
-                    "I can't answer questions beyond this app."
-                )
-
+            assistant_reply = next(
+                (response for keyword, response in FAQ_RESPONSES.items() if keyword in user_query),
+                "I'm here to help with uploading, translation, and dashboard support!"
+            )
             return render_template(
                 "retranslate.html",
                 translation=translation,
@@ -841,9 +918,12 @@ def retranslate(file_id):
                 assistant_reply=assistant_reply
             )
 
-        # Retranslation intent
+        # 🔄 Begin retranslation flow
         reason = request.form.get("retranslate_reason")
         language = request.form.get("output_lang")
+        name_choice = request.form.get("name_choice")  # "keep" or "custom"
+        custom_name = request.form.get("custom_name", "").strip()
+
         orig_file_path = os.path.join(UPLOAD_FOLDER, translation.original_name)
         ext = os.path.splitext(translation.original_name)[1].lower()
 
@@ -853,7 +933,6 @@ def retranslate(file_id):
                 "retranslate.html",
                 translation=translation,
                 languages=SUPPORTED_FONT_LANGUAGES,
-                assistant_reply=None,
                 require_reupload=True
             )
 
@@ -879,8 +958,19 @@ def retranslate(file_id):
 
         translated_text = restore_terms(translated_text, placeholders)
 
-        new_filename = f"retranslated_{uuid.uuid4().hex[:6]}_{language}.pdf"
+        # 📝 Filename logic
+        if name_choice == "custom":
+            if not custom_name:
+                flash("Please provide a custom filename.")
+                return redirect(url_for("retranslate", file_id=file_id))
+            safe_name = secure_filename(custom_name)
+        else:
+            previous_stem = Path(translation.translated_name).stem
+            safe_name = secure_filename(f"{previous_stem}-{language}")
+
+        new_filename = f"{safe_name}.pdf"
         new_path = os.path.join(TRANSLATED_FOLDER, new_filename)
+
         generate_pdf(translated_text, new_path, language)
 
         new_translation = Translation(
@@ -906,7 +996,7 @@ def retranslate(file_id):
 if __name__ == "__main__":
     with app.app_context():
         from models import User
-        user = User.query.filter_by(email="dhar.shridipa@gmail.com").first()
+        user = User.query.filter_by(email="pdfgenieweb@gmail.com").first()
         if user:
             user.password = bcrypt.generate_password_hash("new_secure_password").decode("utf-8")
             db.session.commit()
@@ -919,6 +1009,5 @@ if __name__ == "__main__":
 
         db.create_all()
     app.run(debug=True)
-
 
 

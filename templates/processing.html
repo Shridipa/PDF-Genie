@@ -106,13 +106,21 @@
     <audio id="notif-sound" src="https://upload.wikimedia.org/wikipedia/commons/1/17/Bell-tone.mp3" preload="auto"></audio>
   </div>
 
+  <!-- 🪄 Auto-check every 3s for readiness -->
   <script>
-    setTimeout(() => {
-      document.getElementById("notif-sound").play().catch(() => {});
-      setTimeout(() => {
-        window.location.href = "{{ url_for('dashboard') }}";
-      }, 1000);
-    }, 3500);
+    const checkStatus = () => {
+      fetch("{{ url_for('processing') }}?check=1")
+        .then(res => res.json())
+        .then(data => {
+          if (data.ready) {
+            document.getElementById("notif-sound").play().catch(() => {});
+            window.location.href = data.preview_url;
+          }
+        })
+        .catch(err => console.error("⚠️ Error checking status:", err));
+    };
+
+    setInterval(checkStatus, 3000);
   </script>
 </body>
 </html>

@@ -9,7 +9,7 @@
 
   <style>
     body {
-      background: linear-gradient(135deg, #f3e8ff, #e0f2fe); /* lavender-violet blend */
+      background: linear-gradient(135deg, #f3e8ff, #e0f2fe);
       font-family: 'Segoe UI', sans-serif;
     }
 
@@ -55,15 +55,6 @@
       border: none;
       cursor: pointer;
     }
-
-    .password-strength {
-      font-size: 0.85rem;
-      margin-top: 0.25rem;
-    }
-
-    .strength-weak { color: #ef4444; }
-    .strength-medium { color: #d97706; }
-    .strength-strong { color: #16a34a; }
 
     .btn-primary {
       background: linear-gradient(to right, #7c3aed, #6366f1);
@@ -117,7 +108,6 @@
               <i class="bi bi-eye-fill" id="eyeIcon"></i>
             </span>
           </div>
-          <div class="password-strength" id="passwordStrength"></div>
         </div>
 
         <button type="submit" class="btn btn-primary w-100 py-2 shadow-sm">Log In</button>
@@ -140,36 +130,12 @@
     const password = document.getElementById("password");
     const toggle = document.getElementById("togglePassword");
     const icon = document.getElementById("eyeIcon");
-    const strengthText = document.getElementById("passwordStrength");
 
     toggle.addEventListener("click", () => {
       const type = password.type === "password" ? "text" : "password";
       password.type = type;
       icon.classList.toggle("bi-eye-fill");
       icon.classList.toggle("bi-eye-slash-fill");
-    });
-
-    password.addEventListener("input", () => {
-      const val = password.value;
-      if (!val) return strengthText.textContent = "";
-
-      const hasUpper = /[A-Z]/.test(val);
-      const hasLower = /[a-z]/.test(val);
-      const hasNumber = /\d/.test(val);
-      const hasSymbol = /[^A-Za-z0-9]/.test(val);
-      const strong = val.length >= 12 && hasUpper && hasLower && hasNumber && hasSymbol;
-      const medium = val.length >= 8 && ((hasUpper && hasLower) || (hasLower && hasNumber));
-
-      if (strong) {
-        strengthText.textContent = "Strong password ✅";
-        strengthText.className = "password-strength strength-strong";
-      } else if (medium) {
-        strengthText.textContent = "Moderate password ⚠️";
-        strengthText.className = "password-strength strength-medium";
-      } else {
-        strengthText.textContent = "Weak password ❌";
-        strengthText.className = "password-strength strength-weak";
-      }
     });
   </script>
 </body>

@@ -1,135 +1,422 @@
 {% extends "base.html" %}
 {% block title %}Dashboard{% endblock %}
-
 {% block content %}
-<div class="py-5" style="background: #f5f3ff;">
-  <div class="container px-4 py-5" style="max-width: 980px; background: linear-gradient(135deg, #f3e8ff, #e0f2fe); border-radius: 24px; box-shadow: 0 12px 36px rgba(124, 58, 237, 0.08);">
+<style>
+/* 🌸 Global Body Styling */
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: linear-gradient(135deg, #faf5ff, #e0f7fa);
+  color: #1e1e2f;
+  line-height: 1.6;
+}
 
-    <!-- Welcome Banner -->
-    <div class="p-5 mb-5 rounded-4 text-white shadow-sm"
-         style="background: linear-gradient(135deg, #a78bfa, #60a5fa);">
+/* 📏 Section Header Spacing */
+.section-header {
+  margin-bottom: 0.4rem;
+}
+
+/* 🌼 Card Components */
+.card {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(16px);
+  border-radius: 20px;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 28px rgba(124, 58, 237, 0.08);
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px rgba(124, 58, 237, 0.12);
+}
+
+/* 💎 Badges */
+.badge,
+.badge-soft {
+  font-weight: 500;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(168, 85, 247, 0.1);
+}
+.badge-soft {
+  background: linear-gradient(135deg, #c4b5fd, #a78bfa);
+  color: white;
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.1);
+}
+
+/* 🔁 Toggle Buttons */
+.toggle-btn {
+  transition: all 0.3s ease;
+}
+.toggle-btn.toggle-active {
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+  color: white !important;
+  border: none;
+  box-shadow: 0 4px 10px rgba(124, 58, 237, 0.15);
+}
+
+/* ✨ Entrance Animation */
+.fade-in {
+  animation: fadeIn 0.4s ease-in;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* 🌟 Icon Animation */
+.twinkle-icon {
+  animation: twinkle 2.4s ease-in-out infinite;
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.08); }
+}
+
+/* 📋 Table Container */
+.table-wrapper {
+  padding: 0.9rem 1.00rem;
+  border-radius: 24px;
+  background: linear-gradient(145deg, #f3e8ff, #e0f2fe);
+  box-shadow: 0 12px 36px rgba(124, 58, 237, 0.06);
+  margin-top: 0.10rem;
+}
+
+/* 📐 Table Base */
+.table {
+  font-size: 0.94rem;
+  table-layout: fixed;
+  width: 100%;
+}
+.table thead {
+  background: linear-gradient(135deg, #ede9fe, #e0f2fe);
+  color: #6b21a8;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border-radius: 12px;
+}
+.table th,
+.table td {
+  vertical-align: middle;
+  padding: 0.9rem 0.8rem;
+  word-wrap: break-word;
+}
+
+/* 📏 Column Widths */
+.table th:nth-child(1), .table td:nth-child(1) { width: 30%; }
+.table th:nth-child(2), .table td:nth-child(2) { width: 13%; }
+.table th:nth-child(3), .table td:nth-child(3) { width: 19%; }
+.table th:nth-child(4), .table td:nth-child(4) { width: 13%; }
+.table th:nth-child(5), .table td:nth-child(5) { width: 25%; }
+
+/* 📌 Center Actions Header */
+.table th:nth-child(5) {
+  text-align: center !important;
+}
+
+/* 🌸 Translucent Rows */
+.table tbody tr {
+  background: linear-gradient(135deg, rgba(243, 232, 255, 0.45), rgba(224, 242, 254, 0.35));
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(186, 104, 200, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(140, 85, 255, 0.05);
+  transition: all 0.3s ease;
+  margin-bottom: 12px;
+}
+.table tbody tr:hover {
+  background: linear-gradient(135deg, rgba(237, 233, 254, 0.7), rgba(209, 250, 255, 0.5));
+  box-shadow: 0 12px 28px rgba(136, 84, 255, 0.12);
+}
+
+/* 💫 Button Hover Glow */
+.glow-hover:hover {
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.25);
+  border-color: #a855f7;
+  background-color: #f9f5ff;
+  transition: all 0.3s ease;
+}
+
+/* 🎨 Button Color Hovers */
+.btn-outline-primary:hover {
+  background-color: #ede9fe;
+  color: #5b21b6;
+}
+.btn-outline-secondary:hover {
+  background-color: #f1f5f9;
+  color: #334155;
+}
+.btn-outline-danger:hover {
+  background-color: #fef2f2;
+  color: #991b1b;
+}
+
+/* 🎯 Inline Action Buttons */
+.btn.rounded-circle {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+.btn.rounded-circle i {
+  margin: 0;
+}
+
+/* 📐 Icon Spacing */
+td .d-flex.gap-3,
+td .d-flex.gap-2 {
+  gap: 0.75rem !important;
+}
+.text-purple {
+  color: #9333ea;
+}
+.action-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+.wrap-name {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 260px; /* Optional: control column width */
+}
+</style>
+<div class="py-5">
+  <div class="container px-4 py-5 fade-in" style="max-width: 980px; background: linear-gradient(135deg, #f3e8ff, #e0f2fe); border-radius: 24px; box-shadow: 0 12px 36px rgba(124, 58, 237, 0.08);">
+
+    <!-- 🌼 Welcome Banner -->
+    <div class="p-5 mb-5 rounded-4 text-white shadow-sm" style="background: linear-gradient(135deg, #a78bfa, #60a5fa);">
       <div class="row align-items-center">
         <div class="col-lg-8">
           <h2 class="fw-bold display-5 mb-2">Welcome back, {{ current_user.name or current_user.username or 'User' }} 👋</h2>
           <p class="lead mb-0">
-            You’ve translated <strong>{{ translations|length }}</strong> file{{ translations|length != 1 and 's' or '' }}
+            You've translated <strong>{{ translations|length }}</strong> file{{ translations|length != 1 and 's' or '' }}
             across <strong>{{ translations | map(attribute='language') | unique | list | length }}</strong> language{{ translations | map(attribute='language') | unique | list | length != 1 and 's' or '' }}.
           </p>
         </div>
         <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
-          <a href="{{ url_for('home') }}" class="btn btn-light btn-lg shadow-sm rounded-pill px-4 py-2">
+          <a href="{{ url_for('home') }}" class="btn btn-lg btn-primary rounded-pill px-4">
             <i class="bi bi-plus-circle me-2"></i> New Translation
           </a>
         </div>
       </div>
     </div>
 
-    <!-- Stats Section -->
-    <div class="row g-4 mb-4">
-      <div class="col-md-6">
-        <div class="card text-center border-0 shadow-sm bg-white rounded-4 py-5">
-          <h6 class="text-muted mb-2">Total Translations</h6>
-          <h1 class="fw-bold text-primary display-4">{{ translations|length }}</h1>
-        </div>
-      </div>
-      <div class="col-md-6">
-        {% set langs = translations | map(attribute='language') | unique | list %}
-        <div class="card text-center border-0 shadow-sm bg-white rounded-4 py-5">
-          <h6 class="text-muted mb-2">Languages Used</h6>
-          <h1 class="fw-bold text-success display-4">{{ langs|length }}</h1>
-        </div>
+    {% if translations %}
+    <!-- 🔁 Toggle Buttons -->
+    <div class="text-end mb-4">
+      <div class="btn-group bg-white shadow-sm p-1 rounded-pill">
+        <button class="btn btn-sm toggle-btn toggle-active rounded-pill px-3" id="gridViewBtn">
+          <i class="bi bi-grid-3x3-gap-fill me-1"></i> Tile
+        </button>
+        <button class="btn btn-sm toggle-btn btn-outline-secondary rounded-pill px-3" id="listViewBtn">
+          <i class="bi bi-list-task me-1"></i> List
+        </button>
       </div>
     </div>
 
-    {% if translations %}
-      {% set grouped = translations | groupby('date_only') %}
-      {% for date, items in grouped %}
-        <div class="mt-5">
-          <h5 class="fw-semibold text-secondary mb-3">
-            <i class="bi bi-calendar-check me-2 text-muted"></i>
-            {{ date.strftime('%d %B %Y') }} <span class="text-muted small">IST</span>
-          </h5>
-
-          <div class="row row-cols-1 row-cols-md-2 g-4">
-            {% for t in items %}
-            <div class="col">
-              <div class="card border-0 rounded-4 shadow-sm h-100 px-4 py-3 bg-white position-relative">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                  <div>
-                    <h5 class="fw-semibold text-primary mb-1">
-                      <i class="bi bi-file-earmark-text me-1"></i> {{ t.translated_name or 'Unnamed File' }}
-                      {% if not t.file_exists %}
-                        <span class="badge bg-danger-subtle text-danger border-danger border rounded-pill ms-2 small">
-                          <i class="bi bi-x-circle me-1"></i> Missing PDF
-                        </span>
-                      {% endif %}
-                    </h5>
-                    <small class="text-muted">Uploaded as <span class="fst-italic">{{ t.original_name }}</span></small>
-                  </div>
-                  <span class="badge rounded-pill text-white px-3"
-                        style="background: linear-gradient(135deg, #6366f1, #a78bfa); font-size: 0.8rem;">
-                    <i class="bi bi-translate me-1"></i> {{ t.language.upper() }}
-                  </span>
-                </div>
-
-                <p class="text-muted small mb-3">
-                  <i class="bi bi-clock me-1"></i> {{ t.local_time.strftime('%I:%M:%S %p') }}
-                  — {{ t.duration_display }}
-                </p>
-
+    <!-- 🔳 Tile View -->
+    <div id="tileView" class="row row-cols-1 row-cols-md-2 g-4">
+      {% for t in translations %}
+      <div class="col">
+        <div class="card px-4 py-3 position-relative h-100">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+              <h5 class="fw-semibold text-primary mb-1">
+                <i class="bi bi-file-earmark-text me-1"></i> {{ t.translated_name or 'Unnamed File' }}
                 {% if not t.file_exists %}
-                <div class="alert alert-light border-0 d-flex align-items-center gap-2 small px-3 py-2 rounded-3 shadow-sm"
-                     style="border-left: 4px solid #d8b4fe; background-color: #f8f5ff;">
-                  <i class="bi bi-exclamation-circle-fill text-warning-emphasis"></i>
-                  <div>
-                    <strong>PDF not generated.</strong>
-                    Try <a href="{{ url_for('retranslate', file_id=t.id) }}" class="text-decoration-underline">retranslating</a> or reviewing the input.
-                  </div>
-                </div>
+                <span class="badge bg-danger-subtle text-danger border border-danger rounded-pill ms-2 small">
+                  <i class="bi bi-x-circle me-1"></i> Missing PDF
+                </span>
                 {% endif %}
-
-                <div class="d-flex flex-wrap gap-2 mt-3">
-                  {% if t.file_exists %}
-                  <a href="{{ url_for('translated_pdf', filename=t.translated_name) }}"
-                     class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                    <i class="bi bi-download me-1"></i>Download
-                  </a>
-                  {% endif %}
-                  <a href="{{ url_for('retranslate', file_id=t.id) }}"
-                     class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-                    <i class="bi bi-arrow-repeat me-1"></i>Retranslate
-                  </a>
-                  <form action="{{ url_for('delete_pdf', file_id=t.id) }}" method="POST" class="d-inline">
-                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">
-                      <i class="bi bi-trash3 me-1"></i>Delete
-                    </button>
-                  </form>
-                </div>
-              </div>
+              </h5>
+              <small class="text-muted">Uploaded as <span class="fst-italic">{{ t.original_name }}</span></small>
             </div>
-            {% endfor %}
+            <span class="badge badge-soft px-3">
+              <i class="bi bi-translate me-1"></i> {{ t.language.upper() }}
+            </span>
+          </div>
+          <p class="text-muted small mb-3">
+            <i class="bi bi-clock me-1"></i> {{ t.local_time.strftime('%I:%M:%S %p') }} — {{ t.duration_display }}
+          </p>
+          {% if not t.file_exists %}
+          <div class="alert alert-light border-0 d-flex align-items-center gap-2 small px-3 py-2 rounded-3 shadow-sm"
+               style="border-left: 4px solid #d8b4fe; background-color: #f8f5ff;">
+            <i class="bi bi-exclamation-circle-fill text-warning-emphasis"></i>
+            <div>
+              <strong>PDF not generated.</strong> Try <a href="{{ url_for('retranslate', file_id=t.id) }}" class="text-decoration-underline">retranslating</a>.
+            </div>
+          </div>
+          {% endif %}
+          <div class="d-flex flex-wrap gap-2 mt-3">
+            {% if t.file_exists %}
+            <a href="{{ url_for('translated_pdf', filename=t.translated_name) }}" class="btn btn-sm btn-outline-primary glow-hover rounded-pill px-3">
+              <i class="bi bi-download me-1"></i>Download
+            </a>
+            {% endif %}
+            <a href="{{ url_for('retranslate', file_id=t.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+              <i class="bi bi-arrow-repeat me-1"></i>Retranslate
+            </a>
+            <form action="{{ url_for('delete_pdf', file_id=t.id) }}" method="POST" class="d-inline">
+              <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                <i class="bi bi-trash3 me-1"></i>Delete
+              </button>
+            </form>
           </div>
         </div>
-      {% endfor %}
-    {% else %}
-      <div class="text-center my-5">
-        <img src="{{ url_for('static', filename='assets/empty-state.svg') }}"
-             alt="No files yet" class="img-fluid" style="max-width: 300px;">
-        <h5 class="mt-4 text-muted">Nothing here yet!</h5>
-        <p class="text-muted">Start by uploading your first file to translate.</p>
-        <a href="{{ url_for('home') }}" class="btn btn-primary rounded-pill px-4 py-2">
-          <i class="bi bi-upload me-1"></i> Upload Now
-        </a>
       </div>
-    {% endif %}
-  </div>
-</div>
+      {% endfor %}
+    </div>
+<!-- 📂 Translated Documents -->
+<div id="listView" class="table-responsive d-none table-wrapper mt-5">
+  <h4 class="mb-4 text-dark fw-bold" style="font-family: 'Philosopher', sans-serif;">
+    <i class="bi bi-folder-symlink-fill me-2 text-primary-emphasis twinkle-icon"></i>
+    Translated Documents
+  </h4>
 
-<!-- Floating Action Button -->
-<a href="{{ url_for('home') }}"
-   class="btn btn-primary rounded-circle shadow-lg position-fixed bottom-0 end-0 m-4 d-flex justify-content-center align-items-center"
-   style="width: 56px; height: 56px;">
-  <i class="bi bi-plus-lg fs-4"></i>
-</a>
+  <table class="table align-middle table-borderless text-dark">
+    <thead>
+      <tr class="align-middle">
+        <th class="ps-3">
+          <span class="d-inline-flex align-items-center gap-1">
+            <i class="bi bi-type text-purple"></i>
+            Custom Name
+          </span>
+        </th>
+        <th>
+          <span class="d-inline-flex align-items-center gap-1">
+            <i class="bi bi-translate text-purple"></i>
+            Language
+          </span>
+        </th>
+        <th>
+          <span class="d-inline-flex align-items-center gap-1">
+            <i class="bi bi-calendar3 text-purple"></i>
+            Translated On
+          </span>
+        </th>
+        <th>
+          <span class="d-inline-flex align-items-center gap-1">
+            <i class="bi bi-clock-history text-purple"></i>
+            Duration
+          </span>
+        </th>
+        <th class="text-center">
+          <span class="d-inline-flex align-items-center gap-1">
+            <i class="bi bi-gear text-purple"></i>
+            Actions
+          </span>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in translations %}
+      <tr class="shadow-sm rounded-4"
+          style="
+            background: linear-gradient(135deg, rgba(243,232,255,0.45), rgba(224,242,254,0.35));
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            border: 1px solid rgba(186, 104, 200, 0.12);
+            margin-bottom: 1.2rem;
+            box-shadow: 0 6px 20px rgba(140, 85, 255, 0.05);">
+        <td class="ps-3 fw-semibold wrap-name" title="Original: {{ t.original_name }}">
+          <i class="bi bi-file-earmark-text-fill me-1 text-primary-emphasis"></i>
+          {{ t.translated_name.rsplit('.', 1)[0] }}
+        </td>
+        <td>
+          <span class="badge bg-light text-dark rounded-pill px-3">
+            {{ t.language.upper() }}
+          </span>
+        </td>
+        <td>{{ t.local_time.strftime('%d %b %Y') }}</td>
+        <td>{{ t.duration_display }}</td>
+        <td class="text-center pe-3">
+          <div class="d-flex justify-content-center align-items-center gap-2 flex-nowrap">
+            {% if t.file_exists %}
+            <a href="{{ url_for('translated_pdf', filename=t.translated_name) }}"
+               class="btn btn-sm btn-outline-primary rounded-circle glow-hover action-icon"
+               title="Download">
+              <i class="bi bi-download"></i>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('retranslate', file_id=t.id) }}"
+               class="btn btn-sm btn-outline-secondary rounded-circle action-icon"
+               title="Retranslate">
+              <i class="bi bi-arrow-repeat"></i>
+            </a>
+            <form action="{{ url_for('delete_pdf', file_id=t.id) }}" method="POST" class="d-inline">
+              <button type="submit"
+                      class="btn btn-sm btn-outline-danger rounded-circle action-icon"
+                      title="Delete"
+                      onclick="return confirm('Are you sure you want to delete this file?');">
+                <i class="bi bi-trash3-fill"></i>
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<script>
+  // 🔁 View Toggle Script
+  const gridBtn = document.getElementById("gridViewBtn");
+  const listBtn = document.getElementById("listViewBtn");
+  const tileView = document.getElementById("tileView");
+  const listView = document.getElementById("listView");
+
+  const setView = (mode) => {
+    const isList = mode === "list";
+    tileView.classList.toggle("d-none", isList);
+    listView.classList.toggle("d-none", !isList);
+    gridBtn.classList.toggle("toggle-active", !isList);
+    listBtn.classList.toggle("toggle-active", isList);
+    localStorage.setItem("viewMode", mode);
+  };
+
+  gridBtn.addEventListener("click", () => setView("grid"));
+  listBtn.addEventListener("click", () => setView("list"));
+
+  const savedView = localStorage.getItem("viewMode");
+  setView(savedView === "list" ? "list" : "grid");
+
+  // 🧨 AJAX Delete Document Logic
+  document.querySelectorAll(".delete-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const fileId = btn.dataset.fileId;
+
+      try {
+        const res = await fetch(`/delete/${fileId}`, {
+          method: "POST",
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+        });
+
+        if (res.ok) {
+          const tile = btn.closest(".col");
+          const row = btn.closest("tr");
+          if (tile) tile.remove();
+          if (row) row.remove();
+        } else {
+          alert("Failed to delete the file. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error deleting:", error);
+        alert("Error occurred while deleting.");
+      }
+    });
+  });
+</script>
+{% endif %}
+</div>
+</div>
 {% endblock %}
 
