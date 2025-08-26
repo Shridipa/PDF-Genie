@@ -1,3 +1,4 @@
+
 # 📄 PDF Genie — Make PDFs Speak Every Language
 
 PDF Genie is a web application that transforms static PDF content into dynamic, multilingual experiences. Designed with accessibility and global reach in mind, it extracts text from PDFs with precision and translates it into over 100 languages—all in real time.
@@ -28,10 +29,18 @@ Built using Flask and AJAX, PDF Genie offers a seamless user experience and is i
 
 ---
 
-## 📁 Repository Structure
-
-
-pdf-genie/ ├── templates/      # HTML templates for rendering views ├── static/         # CSS, JavaScript, and image assets ├── scripts/        # Python backend logic ├── logs/           # Debug logs for performance tracking ├── app.py          # Main Flask application └── requirements.txt
+pdf-genie/
+├── templates/       # HTML templates for rendering views
+├── static/          # CSS, JavaScript, and image assets
+├── scripts/         # Python backend logic
+├── logs/            # Debug logs for performance tracking
+├── instance/        # Configuration and runtime data (if used)
+├── migrations/      # Database migration files (if using Flask-Migrate)
+├── app.py           # Main Flask application
+├── config.py        # Configuration settings
+├── extensions.py    # Flask extensions setup
+├── models.py        # Database models
+└── requirements.txt # Python dependencies
 
 ---
 
@@ -41,8 +50,8 @@ To run PDF Genie locally:
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/your-username/pdf-genie.git
-   cd pdf-genie
+   git clone https://github.com/Shridipa/pdf-genie.git
+   cd AI_PDF
 
 
 - Install Dependencies
@@ -50,8 +59,6 @@ pip install -r requirements.txt
 - Run the Application
 python app.py
 
-
-- View in Browser Navigate to http://localhost:5000
 
 🔮 Roadmap
 - 🖼️ OCR Support — Enable text extraction from scanned PDFs
@@ -89,6 +96,7 @@ To make PDF content universally accessible using AI-powered translation and auto
 
 🤝 Contributing
 Pull requests are welcome! For major changes, please open an issue first to discuss what you'd like to change.
+
 
 
 
