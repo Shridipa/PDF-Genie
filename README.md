@@ -1,7 +1,7 @@
 
 # 📄 PDF Genie — Make PDFs Speak Every Language
 
-PDF Genie is a web application that transforms static PDF content into dynamic, multilingual experiences. Designed with accessibility and global reach in mind, it extracts text from PDFs with precision and translates it into over 100 languages—all in real time.
+PDF Genie is a web application that transforms static PDF content into dynamic, multilingual experiences. Designed with accessibility and global reach in mind, it extracts text from PDFs with precision and translates it into over multiple languages—all in real time.
 
 Built using Flask and AJAX, PDF Genie offers a seamless user experience and is ideal for students, researchers, and professionals who need fast, reliable PDF translation.
 
